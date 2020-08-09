@@ -27,6 +27,12 @@ type BoardState struct {
 	State  []byte    `json:"state"`
 }
 
+// ReceivedBoardState is a new board state received from the client.
+type ReceivedBoardState struct {
+	GameID uuid.UUID `json:"gameID"`
+	State  [8][8]int `json:"state"`
+}
+
 // Model that hides unnecessary fields in json
 type Model struct {
 	ID        uint       `json:"-" gorm:"primary_key"`

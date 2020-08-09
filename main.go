@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -20,7 +19,7 @@ var db = getDB(config)
 
 func check(e error) {
 	if e != nil {
-		log.Fatal(e)
+		panic(e)
 	}
 }
 
@@ -83,6 +82,8 @@ func api() {
 	router := mux.NewRouter()
 	router.Handle("/game", GamePostHandler()).Methods("POST")
 	router.Handle("/game/{id}", GameGetHandler()).Methods("GET")
+	router.Handle("/game", GamePatchHandler()).Methods("PATCH")
+
 	http.Handle("/", router) // enable the router
 	port := ":" + strconv.Itoa(config.Port)
 	fmt.Println("\nListening on port " + port)
@@ -109,6 +110,29 @@ func storeBoardState(gameID uuid.UUID, state [8][8]int) {
 	})
 }
 
+// GamePatchHandler handles the game endpoint.
+func GamePatchHandler() http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			panic(err)
+		}
+
+		var jsonBody ReceivedBoardState
+		json.Unmarshal(body, &jsonBody)
+
+		fmt.Println(jsonBody.GameID)
+		fmt.Println(jsonBody.State)
+
+		newState := BoardState{
+			GameID: jsonBody.GameID,
+			State:  serializeBoard(jsonBody.State),
+		}
+
+		db.Create(&newState)
+	})
+}
+
 // GameGetHandler handles the get method on the game endpoint.
 func GameGetHandler() http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
@@ -118,17 +142,12 @@ func GameGetHandler() http.Handler {
 			fmt.Println("bad game ID")
 			return
 		}
-		fmt.Println(gameID.String())
-
 		game := Game{}
 		db.Where("game_id = ?", gameID).First(&game)
-		fmt.Println(game)
 
 		var state [][8][8]int
 		boardStates := []BoardState{}
-		fmt.Println(boardStates)
 		db.Where("game_id = ?", game.GameID).Find(&boardStates)
-		fmt.Println(boardStates)
 
 		for _, row := range boardStates {
 			state = append(state, deserializeBoard(row.State))
@@ -139,11 +158,8 @@ func GameGetHandler() http.Handler {
 			State:  state,
 		}
 
-		fmt.Println(response)
-
 		byteRes, err := json.Marshal(response)
 		check(err)
-
 		res.Write(byteRes)
 	})
 }

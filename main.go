@@ -1,20 +1,27 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"strconv"
+
+	uuid "github.com/satori/go.uuid"
+
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+
+	"github.com/gorilla/mux"
 )
+
+var config = readConfig()
+var db = getDB(config)
 
 func check(e error) {
 	if e != nil {
 		log.Fatal(e)
 	}
-}
-
-func writeBoardToDisk(board [8][8]int) {
-	err := ioutil.WriteFile("board", serializeBoard(board), 0644)
-	check(err)
 }
 
 func serializeBoard(board [8][8]int) []byte {
@@ -60,20 +67,99 @@ func createBoard() [8][8]int {
 }
 
 func main() {
-	board := createBoard()
-	fmt.Println("Created new board:")
-	fmt.Println(board)
-
-	fmt.Println("Saving board to disk.")
-	writeBoardToDisk(board)
-
-	fmt.Println("Loading board from disk.")
-	newBoard := readBoardFromDisk()
-	fmt.Println(newBoard)
+	fmt.Println("Starting backend.")
+	api()
 }
 
-func readBoardFromDisk() [8][8]int {
-	dat, err := ioutil.ReadFile("board")
+func readConfig() Config {
+	bytes, err := ioutil.ReadFile("config.json")
 	check(err)
-	return deserializeBoard(dat)
+	config := Config{}
+	json.Unmarshal(bytes, &config)
+	return config
+}
+
+func api() {
+	router := mux.NewRouter()
+	router.Handle("/game", GamePostHandler()).Methods("POST")
+	router.Handle("/game/{id}", GameGetHandler()).Methods("GET")
+	http.Handle("/", router) // enable the router
+	port := ":" + strconv.Itoa(config.Port)
+	fmt.Println("\nListening on port " + port)
+	err := http.ListenAndServe(port, router) // mux.Router now in play
+	check(err)
+}
+
+// GamePostResponse is a response to the /game endpoint.
+type GamePostResponse struct {
+	GameID uuid.UUID `json:"gameID"`
+	Board  [8][8]int `json:"board"`
+}
+
+// GameGetResponse is a response to the /game endpoint.
+type GameGetResponse struct {
+	GameID uuid.UUID   `json:"gameID"`
+	State  [][8][8]int `json:"state"`
+}
+
+func storeBoardState(gameID uuid.UUID, state [8][8]int) {
+	db.Create(&BoardState{
+		GameID: gameID,
+		State:  serializeBoard(state),
+	})
+}
+
+// GameGetHandler handles the get method on the game endpoint.
+func GameGetHandler() http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		gameID, err := uuid.FromString(vars["id"])
+		if err != nil {
+			fmt.Println("bad game ID")
+			return
+		}
+		fmt.Println(gameID.String())
+
+		game := Game{}
+		db.Where("game_id = ?", gameID).First(&game)
+		fmt.Println(game)
+
+		var state [][8][8]int
+		boardStates := []BoardState{}
+		fmt.Println(boardStates)
+		db.Where("game_id = ?", game.GameID).Find(&boardStates)
+		fmt.Println(boardStates)
+
+		for _, row := range boardStates {
+			state = append(state, deserializeBoard(row.State))
+		}
+
+		response := GameGetResponse{
+			GameID: game.GameID,
+			State:  state,
+		}
+
+		fmt.Println(response)
+
+		byteRes, err := json.Marshal(response)
+		check(err)
+
+		res.Write(byteRes)
+	})
+}
+
+// GamePostHandler handles the game endpoint.
+func GamePostHandler() http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		game := Game{
+			GameID: uuid.NewV4(),
+		}
+		db.Create(&game)
+		storeBoardState(game.GameID, createBoard())
+		// res.Header().Set("Content-Type", "application/x-msgpack")
+		res.Header().Set("Content-Type", "application/json")
+		byteRes, err := json.Marshal(game)
+		check(err)
+		res.Write(byteRes)
+	})
 }

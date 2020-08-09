@@ -53,14 +53,14 @@ func deserializeBoard(dat []byte) [8][8]int {
 
 func createBoard() [8][8]int {
 	board := [8][8]int{
-		{rook, knight, bishop, king, queen, bishop, knight, rook},
-		{pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn},
+		{blackRook, blackKnight, blackBishop, blackKing, blackQueen, blackBishop, blackKnight, blackRook},
+		{blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn},
 		{empty, empty, empty, empty, empty, empty, empty, empty},
 		{empty, empty, empty, empty, empty, empty, empty, empty},
 		{empty, empty, empty, empty, empty, empty, empty, empty},
 		{empty, empty, empty, empty, empty, empty, empty, empty},
-		{pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn},
-		{rook, knight, bishop, king, queen, bishop, knight, rook},
+		{whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn},
+		{whiteRook, whiteKnight, whiteBishop, whiteKing, whiteQueen, whiteBishop, whiteKnight, whiteRook},
 	}
 	return board
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -11,6 +12,7 @@ import (
 
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -87,8 +89,7 @@ func api() {
 	http.Handle("/", router) // enable the router
 	port := ":" + strconv.Itoa(config.Port)
 	fmt.Println("\nListening on port " + port)
-	err := http.ListenAndServe(port, router) // mux.Router now in play
-	check(err)
+	log.Fatal(http.ListenAndServe(port, handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}), handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS", "PATCH"}), handlers.AllowedOrigins([]string{"*"}))(router)))
 }
 
 // GamePostResponse is a response to the /game endpoint.

@@ -14,10 +14,18 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 var config = readConfig()
 var db = getDB(config)
+var socketSubs = []SocketSub{}
+
+// SocketSub is a subscription to a socket.
+type SocketSub struct {
+	GameID uuid.UUID       `json:"gameID"`
+	Conn   *websocket.Conn `json:"-"`
+}
 
 func check(e error) {
 	if e != nil {
@@ -80,11 +88,62 @@ func readConfig() Config {
 	return config
 }
 
+// GetIP from http request
+func GetIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-FORWARDED-FOR")
+	if forwarded != "" {
+		return forwarded
+	}
+	return r.RemoteAddr
+}
+
+// SocketHandler handles the websocket connection messages and responses.
+func SocketHandler() http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		fmt.Println(req.Method, req.URL, GetIP(req))
+
+		vars := mux.Vars(req)
+		id := vars["id"]
+
+		gameID, err := uuid.FromString(id)
+		if err != nil {
+			fmt.Println("Invalid gameID.")
+			return
+		}
+
+		var upgrader = websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+		}
+
+		upgrader.CheckOrigin = func(req *http.Request) bool { return true }
+
+		conn, err := upgrader.Upgrade(res, req, nil)
+
+		if err != nil {
+			fmt.Println(err)
+			res.Write([]byte("the client is not using the websocket protocol: 'upgrade' token not found in 'Connection' header"))
+			return
+		}
+
+		fmt.Println("Incoming websocket connection.")
+
+		socketSub := SocketSub{
+			GameID: gameID,
+			Conn:   conn,
+		}
+		socketSubs = append(socketSubs, socketSub)
+
+		fmt.Println("Added subscription to list.")
+	})
+}
+
 func api() {
 	router := mux.NewRouter()
 	router.Handle("/game", GamePostHandler()).Methods("POST")
 	router.Handle("/game/{id}", GameGetHandler()).Methods("GET")
 	router.Handle("/game", GamePatchHandler()).Methods("PATCH")
+	router.Handle("/socket/{id}", SocketHandler()).Methods("GET")
 
 	http.Handle("/", router) // enable the router
 	port := ":" + strconv.Itoa(config.Port)

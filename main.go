@@ -170,6 +170,12 @@ func storeBoardState(gameID uuid.UUID, state [8][8]int) {
 	})
 }
 
+type GameStatePush struct {
+	GameID uuid.UUID `json:"gameID"`
+	Board  [8][8]int `json:"board"`
+	Type   string    `json:"type"`
+}
+
 // GamePatchHandler handles the game endpoint.
 func GamePatchHandler() http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
@@ -181,15 +187,25 @@ func GamePatchHandler() http.Handler {
 		var jsonBody ReceivedBoardState
 		json.Unmarshal(body, &jsonBody)
 
-		fmt.Println(jsonBody.GameID)
-		fmt.Println(jsonBody.State)
-
 		newState := BoardState{
 			GameID: jsonBody.GameID,
 			State:  serializeBoard(jsonBody.State),
 		}
 
 		db.Create(&newState)
+
+		broadcastState := GameStatePush{
+			GameID: jsonBody.GameID,
+			Board:  jsonBody.State,
+			Type:   "move",
+		}
+
+		for _, sub := range socketSubs {
+			if sub.GameID == jsonBody.GameID {
+				// send the new state
+				sub.Conn.WriteJSON(broadcastState)
+			}
+		}
 	})
 }
 

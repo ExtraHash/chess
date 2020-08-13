@@ -1,3 +1,4 @@
 chess
 board
-config.json
+config*.json
+*.db

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +13,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -25,6 +28,13 @@ var socketSubs = []SocketSub{}
 type SocketSub struct {
 	GameID uuid.UUID       `json:"gameID"`
 	Conn   *websocket.Conn `json:"-"`
+}
+
+// JoinRequest is a request to join a game.
+type JoinRequest struct {
+	PubKey string `json:"pubKey"`
+	Signed string `json:"signed"`
+	Side   string `json:"side"`
 }
 
 func check(e error) {
@@ -141,8 +151,9 @@ func SocketHandler() http.Handler {
 func api() {
 	router := mux.NewRouter()
 	router.Handle("/game", GamePostHandler()).Methods("POST")
-	router.Handle("/game/{id}", GameGetHandler()).Methods("GET")
 	router.Handle("/game", GamePatchHandler()).Methods("PATCH")
+	router.Handle("/game/{id}", GameGetHandler()).Methods("GET")
+	router.Handle("/join/{id}", JoinPostHandler()).Methods("POST")
 	router.Handle("/socket/{id}", SocketHandler()).Methods("GET")
 
 	http.Handle("/", router) // enable the router
@@ -163,13 +174,15 @@ type GameGetResponse struct {
 	State  [][8][8]int `json:"state"`
 }
 
-func storeBoardState(gameID uuid.UUID, state [8][8]int) {
+func storeBoardState(gameID uuid.UUID, state [8][8]int, moveAuthor string) {
 	db.Create(&BoardState{
-		GameID: gameID,
-		State:  serializeBoard(state),
+		GameID:     gameID,
+		State:      serializeBoard(state),
+		MoveAuthor: moveAuthor,
 	})
 }
 
+// GameStatePush is a websocket notification of a new game state.
 type GameStatePush struct {
 	GameID uuid.UUID `json:"gameID"`
 	Board  [8][8]int `json:"board"`
@@ -187,9 +200,53 @@ func GamePatchHandler() http.Handler {
 		var jsonBody ReceivedBoardState
 		json.Unmarshal(body, &jsonBody)
 
+		game := Game{}
+		db.First(&game).Where("game_id = ?", jsonBody.GameID)
+
+		lastMove := BoardState{}
+		db.Last(&lastMove).Where("game_id = ?", jsonBody.GameID)
+
+		sig, err := hex.DecodeString(jsonBody.Signed)
+		if err != nil {
+			fmt.Println("signature is not valid hex string.")
+			return
+		}
+
+		verified := false
+
+		if lastMove.MoveAuthor == "WHITE" {
+			if len(game.BlackPlayer) == 0 {
+				fmt.Println("There is no black player!")
+				return
+			}
+			verified = ed25519.Verify(game.BlackPlayer, serializeBoard(jsonBody.State), sig)
+		}
+
+		if lastMove.MoveAuthor == "BLACK" {
+			if len(game.WhitePlayer) == 0 {
+				fmt.Println("There is no white player!")
+				return
+			}
+			verified = ed25519.Verify(game.WhitePlayer, serializeBoard(jsonBody.State), sig)
+		}
+
+		if !verified {
+			fmt.Println("Invalid signature for move.")
+			return
+		}
+
+		var newMoveAuthor string
+		if lastMove.MoveAuthor == "BLACK" {
+			newMoveAuthor = "WHITE"
+		}
+		if lastMove.MoveAuthor == "WHITE" {
+			newMoveAuthor = "BLACK"
+		}
+
 		newState := BoardState{
-			GameID: jsonBody.GameID,
-			State:  serializeBoard(jsonBody.State),
+			GameID:     jsonBody.GameID,
+			State:      serializeBoard(jsonBody.State),
+			MoveAuthor: newMoveAuthor,
 		}
 
 		db.Create(&newState)
@@ -247,11 +304,77 @@ func GamePostHandler() http.Handler {
 			GameID: uuid.NewV4(),
 		}
 		db.Create(&game)
-		storeBoardState(game.GameID, createBoard())
+		storeBoardState(game.GameID, createBoard(), "BLACK")
 		// res.Header().Set("Content-Type", "application/x-msgpack")
 		res.Header().Set("Content-Type", "application/json")
 		byteRes, err := json.Marshal(game)
 		check(err)
 		res.Write(byteRes)
+	})
+}
+
+// JoinPostHandler handles the post endpoint.
+func JoinPostHandler() http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		gameID, err := uuid.FromString(vars["id"])
+		if err != nil {
+			fmt.Println("bad game ID")
+			return
+		}
+
+		fmt.Println(gameID)
+
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			panic(err)
+		}
+
+		var jsonBody JoinRequest
+		json.Unmarshal(body, &jsonBody)
+
+		fmt.Println(jsonBody)
+
+		game := Game{}
+		db.First(&game).Where("game_id = ?", gameID)
+
+		var requestedSide ed25519.PublicKey
+		if jsonBody.Side == "WHITE" {
+			requestedSide = game.WhitePlayer
+		}
+		if jsonBody.Side == "BLACK" {
+			requestedSide = game.BlackPlayer
+		}
+
+		if len(requestedSide) == 0 {
+			fmt.Println("Nobody is playing " + jsonBody.Side + " currently, checking signature.")
+			sig, err := hex.DecodeString(jsonBody.Signed)
+			if err != nil {
+				fmt.Println("Signature is not valid hex string.")
+				return
+			}
+
+			pubKey, err := hex.DecodeString(jsonBody.PubKey)
+			if err != nil {
+				fmt.Println("Public key is not valid hex string.")
+				return
+			}
+
+			if ed25519.Verify(pubKey, []byte(gameID.String()), sig) {
+				fmt.Println("Player successfully joined as " + jsonBody.Side)
+				if jsonBody.Side == "WHITE" {
+					game.WhitePlayer = pubKey
+				}
+				if jsonBody.Side == "BLACK" {
+					game.BlackPlayer = pubKey
+				}
+				db.Save(&game)
+			} else {
+				fmt.Println("Signature didn't verify properly.")
+				return
+			}
+		} else {
+			fmt.Println("There's already a player for " + jsonBody.Side)
+		}
 	})
 }

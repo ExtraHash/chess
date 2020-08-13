@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ed25519"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -17,20 +18,24 @@ type Config struct {
 // Game is an individual chess game.
 type Game struct {
 	Model
-	GameID uuid.UUID `json:"gameID"`
+	GameID      uuid.UUID         `json:"gameID"`
+	WhitePlayer ed25519.PublicKey `json:"whitePlayer"`
+	BlackPlayer ed25519.PublicKey `json:"blackPlayer"`
 }
 
 // BoardState is a single moment in time for a chess board
 type BoardState struct {
 	Model
-	GameID uuid.UUID `json:"gameID"`
-	State  []byte    `json:"state"`
+	GameID     uuid.UUID `json:"gameID"`
+	State      []byte    `json:"state"`
+	MoveAuthor string    `json:"moveAuthor"`
 }
 
 // ReceivedBoardState is a new board state received from the client.
 type ReceivedBoardState struct {
 	GameID uuid.UUID `json:"gameID"`
 	State  [8][8]int `json:"state"`
+	Signed string    `json:"signed"`
 }
 
 // Model that hides unnecessary fields in json

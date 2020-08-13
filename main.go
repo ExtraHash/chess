@@ -192,6 +192,8 @@ type GameStatePush struct {
 // GamePatchHandler handles the game endpoint.
 func GamePatchHandler() http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		fmt.Println(req.Method, req.URL, GetIP(req))
+
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			panic(err)
@@ -205,8 +207,6 @@ func GamePatchHandler() http.Handler {
 
 		lastMove := BoardState{}
 		db.Last(&lastMove, "game_id = ?", jsonBody.GameID)
-
-		fmt.Println(lastMove)
 
 		sig, err := hex.DecodeString(jsonBody.Signed)
 		if err != nil {
@@ -225,16 +225,12 @@ func GamePatchHandler() http.Handler {
 		}
 
 		if lastMove.MoveAuthor == "BLACK" {
-			fmt.Println(len(game.WhitePlayer))
-			fmt.Println(string(game.WhitePlayer))
 			if len(game.WhitePlayer) == 0 {
 				fmt.Println("There is no white player!")
 				return
 			}
 			verified = ed25519.Verify(game.WhitePlayer, serializeBoard(jsonBody.State), sig)
 		}
-
-		fmt.Println(verified)
 
 		if !verified {
 			fmt.Println("Invalid signature for move.")
@@ -249,32 +245,61 @@ func GamePatchHandler() http.Handler {
 			newMoveAuthor = "BLACK"
 		}
 
-		newState := BoardState{
-			GameID:     jsonBody.GameID,
-			State:      serializeBoard(jsonBody.State),
-			MoveAuthor: newMoveAuthor,
+		if isValidMove(deserializeBoard(lastMove.State), jsonBody.State, newMoveAuthor) {
+			newState := BoardState{
+				GameID:     jsonBody.GameID,
+				State:      serializeBoard(jsonBody.State),
+				MoveAuthor: newMoveAuthor,
+			}
+
+			db.Create(&newState)
+
+			broadcastState := GameStatePush{
+				GameID: jsonBody.GameID,
+				Board:  jsonBody.State,
+				Type:   "move",
+			}
+
+			for _, sub := range socketSubs {
+				if sub.GameID == jsonBody.GameID {
+					// send the new state
+					sub.Conn.WriteJSON(broadcastState)
+				}
+			}
+		} else {
+			fmt.Println("Move is not valid.")
+			return
 		}
 
-		db.Create(&newState)
+	})
+}
 
-		broadcastState := GameStatePush{
-			GameID: jsonBody.GameID,
-			Board:  jsonBody.State,
-			Type:   "move",
-		}
+/*
+- Only one piece may move at a time
+- Player may only move their own pieces (edge case: castling)
+- Pieces may only move to the squares they are allowed to move
+*/
+func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool {
+	fmt.Println("AUTHOR", moveAuthor)
+	fmt.Println("OLD STATE", oldState)
+	fmt.Println("NEW STATE", newState)
 
-		for _, sub := range socketSubs {
-			if sub.GameID == jsonBody.GameID {
-				// send the new state
-				sub.Conn.WriteJSON(broadcastState)
+	for i := range oldState {
+		for j := range oldState {
+			if oldState[i][j] != newState[i][j] {
+				fmt.Println(i, j, oldState[i][j], newState[i][j])
 			}
 		}
-	})
+	}
+
+	return true
 }
 
 // GameGetHandler handles the get method on the game endpoint.
 func GameGetHandler() http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		fmt.Println(req.Method, req.URL, GetIP(req))
+
 		vars := mux.Vars(req)
 		gameID, err := uuid.FromString(vars["id"])
 		if err != nil {
@@ -306,6 +331,8 @@ func GameGetHandler() http.Handler {
 // GamePostHandler handles the game endpoint.
 func GamePostHandler() http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		fmt.Println(req.Method, req.URL, GetIP(req))
+
 		game := Game{
 			GameID: uuid.NewV4(),
 		}
@@ -322,14 +349,14 @@ func GamePostHandler() http.Handler {
 // JoinPostHandler handles the post endpoint.
 func JoinPostHandler() http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		fmt.Println(req.Method, req.URL, GetIP(req))
+
 		vars := mux.Vars(req)
 		gameID, err := uuid.FromString(vars["id"])
 		if err != nil {
 			fmt.Println("bad game ID")
 			return
 		}
-
-		fmt.Println(gameID)
 
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
@@ -338,8 +365,6 @@ func JoinPostHandler() http.Handler {
 
 		var jsonBody JoinRequest
 		json.Unmarshal(body, &jsonBody)
-
-		fmt.Println(jsonBody)
 
 		game := Game{}
 		db.First(&game, "game_id = ?", gameID)

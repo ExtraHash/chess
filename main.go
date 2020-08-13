@@ -201,10 +201,12 @@ func GamePatchHandler() http.Handler {
 		json.Unmarshal(body, &jsonBody)
 
 		game := Game{}
-		db.First(&game).Where("game_id = ?", jsonBody.GameID)
+		db.First(&game, "game_id = ?", jsonBody.GameID)
 
 		lastMove := BoardState{}
-		db.Last(&lastMove).Where("game_id = ?", jsonBody.GameID)
+		db.Last(&lastMove, "game_id = ?", jsonBody.GameID)
+
+		fmt.Println(lastMove)
 
 		sig, err := hex.DecodeString(jsonBody.Signed)
 		if err != nil {
@@ -223,12 +225,16 @@ func GamePatchHandler() http.Handler {
 		}
 
 		if lastMove.MoveAuthor == "BLACK" {
+			fmt.Println(len(game.WhitePlayer))
+			fmt.Println(string(game.WhitePlayer))
 			if len(game.WhitePlayer) == 0 {
 				fmt.Println("There is no white player!")
 				return
 			}
 			verified = ed25519.Verify(game.WhitePlayer, serializeBoard(jsonBody.State), sig)
 		}
+
+		fmt.Println(verified)
 
 		if !verified {
 			fmt.Println("Invalid signature for move.")
@@ -336,7 +342,7 @@ func JoinPostHandler() http.Handler {
 		fmt.Println(jsonBody)
 
 		game := Game{}
-		db.First(&game).Where("game_id = ?", gameID)
+		db.First(&game, "game_id = ?", gameID)
 
 		var requestedSide ed25519.PublicKey
 		if jsonBody.Side == "WHITE" {

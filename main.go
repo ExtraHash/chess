@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/fatih/color"
 	uuid "github.com/satori/go.uuid"
 
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -207,15 +208,12 @@ func GamePatchHandler() http.Handler {
 
 		lastMove := BoardState{}
 		db.Last(&lastMove, "game_id = ?", jsonBody.GameID)
-
 		sig, err := hex.DecodeString(jsonBody.Signed)
 		if err != nil {
 			fmt.Println("signature is not valid hex string.")
 			return
 		}
-
 		verified := false
-
 		if lastMove.MoveAuthor == "WHITE" {
 			if len(game.BlackPlayer) == 0 {
 				fmt.Println("There is no black player!")
@@ -244,22 +242,18 @@ func GamePatchHandler() http.Handler {
 		if lastMove.MoveAuthor == "WHITE" {
 			newMoveAuthor = "BLACK"
 		}
-
 		if isValidMove(deserializeBoard(lastMove.State), jsonBody.State, newMoveAuthor) {
 			newState := BoardState{
 				GameID:     jsonBody.GameID,
 				State:      serializeBoard(jsonBody.State),
 				MoveAuthor: newMoveAuthor,
 			}
-
 			db.Create(&newState)
-
 			broadcastState := GameStatePush{
 				GameID: jsonBody.GameID,
 				Board:  jsonBody.State,
 				Type:   "move",
 			}
-
 			for _, sub := range socketSubs {
 				if sub.GameID == jsonBody.GameID {
 					// send the new state
@@ -270,8 +264,34 @@ func GamePatchHandler() http.Handler {
 			fmt.Println("Move is not valid.")
 			return
 		}
-
 	})
+}
+
+type squareDiff struct {
+	Row     int `json:"row"`
+	Column  int `json:"column"`
+	Removed int `json:"removed"`
+	Added   int `json:"added"`
+}
+
+func printDiff(diff squareDiff) {
+	printString := strconv.Itoa(diff.Row) + " " + strconv.Itoa(diff.Column) + " " + strconv.Itoa(diff.Removed) + "=>" + strconv.Itoa(diff.Added)
+	if diff.Added == empty {
+		color.Red(printString)
+	} else {
+		color.Green(printString)
+	}
+}
+
+func pieceColor(piece int) string {
+	switch piece {
+	case blackPawn, blackKnight, blackBishop, blackQueen, blackKing:
+		return "BLACK"
+	case whitePawn, whiteKnight, whiteBishop, whiteQueen, whiteKing:
+		return "WHITE"
+	default:
+		return "INVALID"
+	}
 }
 
 /*
@@ -280,18 +300,59 @@ func GamePatchHandler() http.Handler {
 - Pieces may only move to the squares they are allowed to move
 */
 func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool {
-	fmt.Println("AUTHOR", moveAuthor)
-	fmt.Println("OLD STATE", oldState)
-	fmt.Println("NEW STATE", newState)
+	squareDiffs := []squareDiff{}
 
 	for i := range oldState {
 		for j := range oldState {
 			if oldState[i][j] != newState[i][j] {
-				fmt.Println(i, j, oldState[i][j], newState[i][j])
+				diff := squareDiff{
+					Row:     i,
+					Column:  j,
+					Removed: oldState[i][j],
+					Added:   newState[i][j],
+				}
+				squareDiffs = append(squareDiffs, diff)
+				printDiff(diff)
 			}
 		}
 	}
 
+	var pieceMoved int
+	if len(squareDiffs) > 2 {
+		fmt.Println("Expected square diff of length<=2, but received length " + strconv.Itoa(len(squareDiffs)))
+		return false
+	}
+	if len(squareDiffs) == 2 {
+		for _, diff := range squareDiffs {
+			if diff.Added == empty {
+				pieceMoved = diff.Removed
+			}
+		}
+		if squareDiffs[0].Added == empty {
+			pieceMoved = squareDiffs[0].Removed
+		}
+		fmt.Println("Moved piece " + strconv.Itoa(pieceMoved))
+	}
+	if len(squareDiffs) <= 1 {
+		fmt.Println("Expected square diff of length<=2, but received length " + strconv.Itoa(len(squareDiffs)))
+		return false
+	}
+
+	if pieceColor(pieceMoved) != moveAuthor {
+		fmt.Println("User did not move their own piece.")
+		return false
+	}
+	if !legalMoveForPiece(pieceMoved, squareDiffs) {
+		fmt.Println("Illegal move for piece " + strconv.Itoa(pieceMoved))
+		return false
+	}
+
+	return true
+}
+
+func legalMoveForPiece(piece int, move []squareDiff) bool {
+	fmt.Println(piece)
+	fmt.Println(move)
 	return true
 }
 
@@ -400,6 +461,13 @@ func JoinPostHandler() http.Handler {
 					game.BlackPlayer = pubKey
 				}
 				db.Save(&game)
+
+				for _, sub := range socketSubs {
+					if sub.GameID == gameID {
+						sub.Conn.WriteJSON(game)
+					}
+				}
+
 			} else {
 				fmt.Println("Signature didn't verify properly.")
 				return

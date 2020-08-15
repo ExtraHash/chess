@@ -351,9 +351,14 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool
 }
 
 func legalMoveForPiece(piece int, move []squareDiff) bool {
-	fmt.Println(piece)
-	fmt.Println(move)
-	return true
+	switch piece {
+	case whitePawn:
+		return true
+	case blackPawn:
+		return true
+	default:
+		return true
+	}
 }
 
 // GameGetHandler handles the get method on the game endpoint.

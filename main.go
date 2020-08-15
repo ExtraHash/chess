@@ -379,7 +379,7 @@ func evaluateDirection(startPos []int, endPos []int) string {
 	return "INVALID"
 }
 
-func squaresBetweenClear(piece int, startPos []int, endPos []int, boardState [8][8]int) bool {
+func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) bool {
 	direction := evaluateDirection(startPos, endPos)
 
 	for _, row := range boardState {
@@ -398,6 +398,18 @@ func squaresBetweenClear(piece int, startPos []int, endPos []int, boardState [8]
 	case "S":
 		for i := startPos[0] + 1; i < endPos[0]; i++ {
 			if boardState[i][startPos[1]] != empty {
+				clear = false
+			}
+		}
+	case "E":
+		for i := startPos[1] + 1; i < endPos[1]; i++ {
+			if boardState[startPos[0]][i] != empty {
+				clear = false
+			}
+		}
+	case "W":
+		for i := startPos[1] - 1; i > endPos[1]; i-- {
+			if boardState[startPos[0]][i] != empty {
 				clear = false
 			}
 		}
@@ -431,17 +443,29 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int) bool 
 	switch piece {
 	case whitePawn:
 		if (rowCheck == 1 || rowCheck == 2) && colCheck == 0 && pieceTaken == 0 {
-			return squaresBetweenClear(piece, startPos, endPos, boardState)
+			if rowCheck == 2 {
+				if startPos[0] == 6 {
+					return squaresBetweenClear(startPos, endPos, boardState)
+				}
+				return false
+			}
+			return squaresBetweenClear(startPos, endPos, boardState)
 		}
-		if (rowCheck == 1 || rowCheck == 2) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
+		if (rowCheck == 1) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
 			return true
 		}
 		return false
 	case blackPawn:
 		if (rowCheck == -1 || rowCheck == -2) && colCheck == 0 && pieceTaken == 0 {
-			return squaresBetweenClear(piece, startPos, endPos, boardState)
+			if rowCheck == -2 {
+				if startPos[0] == 1 {
+					return squaresBetweenClear(startPos, endPos, boardState)
+				}
+				return false
+			}
+			return squaresBetweenClear(startPos, endPos, boardState)
 		}
-		if (rowCheck == -1 || rowCheck == -2) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
+		if (rowCheck == -1) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
 			return true
 		}
 		return false
@@ -473,18 +497,17 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int) bool 
 		return false
 	case whiteBishop, blackBishop:
 		if math.Abs(float64(rowCheck)) == math.Abs(float64(colCheck)) {
-			return true
+			return squaresBetweenClear(startPos, endPos, boardState)
 		}
 		return false
 	case whiteRook, blackRook:
 		if rowCheck == 0 || colCheck == 0 {
-			return true
+			return squaresBetweenClear(startPos, endPos, boardState)
 		}
 		return false
 	case whiteQueen, blackQueen:
-		fmt.Println(squaresBetweenClear(piece, startPos, endPos, boardState))
 		if math.Abs(float64(rowCheck)) == math.Abs(float64(colCheck)) || (rowCheck == 0 || colCheck == 0) {
-			return true
+			return squaresBetweenClear(startPos, endPos, boardState)
 		}
 		return false
 	case whiteKing, blackKing:

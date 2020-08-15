@@ -350,7 +350,7 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool
 		fmt.Println("User did not move their own piece.")
 		return false
 	}
-	if !legalMoveForPiece(pieceMoved, squareDiffs) {
+	if !legalMoveForPiece(pieceMoved, squareDiffs, newState) {
 		fmt.Println("Illegal move for piece " + strconv.Itoa(pieceMoved))
 		return false
 	}
@@ -358,7 +358,17 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool
 	return true
 }
 
-func legalMoveForPiece(piece int, move []squareDiff) bool {
+func squaresBetweenClear(piece int, startPos []int, endPos []int, boardState [8][8]int) bool {
+	for i := startPos[0]; i < endPos[0]; i++ {
+		for j := startPos[1]; j < endPos[1]; j++ {
+			fmt.Println(boardState[i][j])
+		}
+	}
+
+	return false
+}
+
+func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int) bool {
 	startPos := []int{}
 	endPos := []int{}
 	var pieceTaken int
@@ -384,7 +394,7 @@ func legalMoveForPiece(piece int, move []squareDiff) bool {
 
 	switch piece {
 	case whitePawn:
-		if (rowCheck == 1 || rowCheck == 2) && colCheck == 0 {
+		if (rowCheck == 1 || rowCheck == 2) && colCheck == 0 && pieceTaken == 0 {
 			return true
 		}
 		if (rowCheck == 1 || rowCheck == 2) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
@@ -392,7 +402,8 @@ func legalMoveForPiece(piece int, move []squareDiff) bool {
 		}
 		return false
 	case blackPawn:
-		if (rowCheck == -1 || rowCheck == -2) && colCheck == 0 {
+		if (rowCheck == -1 || rowCheck == -2) && colCheck == 0 && pieceTaken == 0 {
+			fmt.Println(squaresBetweenClear(piece, startPos, endPos, boardState))
 			return true
 		}
 		if (rowCheck == -1 || rowCheck == -2) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {

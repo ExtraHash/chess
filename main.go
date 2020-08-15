@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -285,9 +286,9 @@ func printDiff(diff squareDiff) {
 
 func pieceColor(piece int) string {
 	switch piece {
-	case blackPawn, blackKnight, blackBishop, blackQueen, blackKing:
+	case blackPawn, blackKnight, blackBishop, blackRook, blackQueen, blackKing:
 		return "BLACK"
-	case whitePawn, whiteKnight, whiteBishop, whiteQueen, whiteKing:
+	case whitePawn, whiteKnight, whiteBishop, whiteRook, whiteQueen, whiteKing:
 		return "WHITE"
 	default:
 		return "INVALID"
@@ -370,8 +371,9 @@ func legalMoveForPiece(piece int, move []squareDiff) bool {
 
 	rowCheck := startPos[0] - endPos[0]
 	colCheck := startPos[1] - endPos[1]
-
 	fmt.Println(startPos, endPos, pieceTaken)
+	fmt.Println(rowCheck, colCheck)
+
 	switch piece {
 	case whitePawn:
 		if (rowCheck == 1 || rowCheck == 2) && colCheck == 0 {
@@ -386,6 +388,73 @@ func legalMoveForPiece(piece int, move []squareDiff) bool {
 			return true
 		}
 		if (rowCheck == -1 || rowCheck == -2) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
+			return true
+		}
+		return false
+	case whiteKnight, blackKnight:
+		if rowCheck == 2 && colCheck == -1 {
+			return true
+		}
+		if rowCheck == 2 && colCheck == 1 {
+			return true
+		}
+		if rowCheck == 1 && colCheck == 2 {
+			return true
+		}
+		if rowCheck == 1 && colCheck == -2 {
+			return true
+		}
+		if rowCheck == -1 && colCheck == -2 {
+			return true
+		}
+		if rowCheck == -1 && colCheck == 2 {
+			return true
+		}
+		if rowCheck == -2 && colCheck == 1 {
+			return true
+		}
+		if rowCheck == -2 && colCheck == -1 {
+			return true
+		}
+		return false
+	case whiteBishop, blackBishop:
+		if math.Abs(float64(rowCheck)) == math.Abs(float64(colCheck)) {
+			return true
+		}
+		return false
+	case whiteRook, blackRook:
+		if rowCheck == 0 || colCheck == 0 {
+			return true
+		}
+		return false
+	case whiteQueen, blackQueen:
+		if math.Abs(float64(rowCheck)) == math.Abs(float64(colCheck)) || (rowCheck == 0 || colCheck == 0) {
+			return true
+		}
+		return false
+	case whiteKing, blackKing:
+		if rowCheck == 1 && colCheck == 0 {
+			return true
+		}
+		if rowCheck == -1 && colCheck == 0 {
+			return true
+		}
+		if rowCheck == 0 && colCheck == 1 {
+			return true
+		}
+		if rowCheck == 0 && colCheck == -1 {
+			return true
+		}
+		if rowCheck == 1 && colCheck == 1 {
+			return true
+		}
+		if rowCheck == 1 && colCheck == -1 {
+			return true
+		}
+		if rowCheck == -1 && colCheck == 1 {
+			return true
+		}
+		if rowCheck == -1 && colCheck == -1 {
 			return true
 		}
 		return false

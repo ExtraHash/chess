@@ -358,12 +358,51 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool
 	return true
 }
 
-func squaresBetweenClear(piece int, startPos []int, endPos []int, boardState [8][8]int) bool {
-	for i := startPos[0]; i < endPos[0]; i++ {
-		for j := startPos[1]; j < endPos[1]; j++ {
-			fmt.Println(boardState[i][j])
-		}
+func evaluateDirection(startPos []int, endPos []int) string {
+	rowCheck := startPos[0] - endPos[0]
+	colCheck := startPos[1] - endPos[1]
+
+	fmt.Println(rowCheck, colCheck)
+
+	if startPos[1] == endPos[1] && startPos[0] > endPos[0] {
+		return "N"
 	}
+	if math.Abs(float64(rowCheck)) == math.Abs(float64(rowCheck)) && rowCheck > 0 && colCheck < 0 {
+		return "NE"
+	}
+	if startPos[0] == endPos[0] && startPos[1] < endPos[1] {
+		return "E"
+	}
+	if math.Abs(float64(rowCheck)) == math.Abs(float64(rowCheck)) && rowCheck < 0 && colCheck < 0 {
+		return "SE"
+	}
+	if startPos[1] == endPos[1] && startPos[0] < endPos[0] {
+		return "S"
+	}
+	if math.Abs(float64(rowCheck)) == math.Abs(float64(rowCheck)) && rowCheck < 0 && colCheck > 0 {
+		return "SW"
+	}
+	if startPos[0] == endPos[0] && startPos[1] > endPos[1] {
+		return "W"
+	}
+	if math.Abs(float64(rowCheck)) == math.Abs(float64(rowCheck)) && rowCheck > 0 && colCheck > 0 {
+		return "NW"
+	}
+
+	return "INVALID"
+}
+
+func squaresBetweenClear(piece int, startPos []int, endPos []int, boardState [8][8]int) bool {
+	fmt.Println(startPos, endPos)
+	direction := evaluateDirection(startPos, endPos)
+
+	fmt.Println(direction)
+
+	// for i := startPos[0]; i < endPos[0]; i++ {
+	// 	for j := startPos[1]; j < endPos[1]; j++ {
+	// 		fmt.Println(boardState[i][j])
+	// 	}
+	// }
 
 	return false
 }
@@ -394,6 +433,7 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int) bool 
 
 	switch piece {
 	case whitePawn:
+		fmt.Println(squaresBetweenClear(piece, startPos, endPos, boardState))
 		if (rowCheck == 1 || rowCheck == 2) && colCheck == 0 && pieceTaken == 0 {
 			return true
 		}
@@ -447,6 +487,7 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int) bool 
 		}
 		return false
 	case whiteQueen, blackQueen:
+		fmt.Println(squaresBetweenClear(piece, startPos, endPos, boardState))
 		if math.Abs(float64(rowCheck)) == math.Abs(float64(colCheck)) || (rowCheck == 0 || colCheck == 0) {
 			return true
 		}

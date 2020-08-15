@@ -395,9 +395,9 @@ func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) boo
 				clear = false
 			}
 		}
-	case "S":
-		for i := startPos[0] + 1; i < endPos[0]; i++ {
-			if boardState[i][startPos[1]] != empty {
+	case "NE":
+		for i, j := startPos[0]-1, startPos[1]+1; i > endPos[0]; i, j = i-1, j+1 {
+			if boardState[i][j] != empty {
 				clear = false
 			}
 		}
@@ -407,9 +407,33 @@ func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) boo
 				clear = false
 			}
 		}
+	case "SE":
+		for i, j := startPos[0]+1, startPos[1]+1; i < endPos[0]; i, j = i+1, j+1 {
+			if boardState[i][j] != empty {
+				clear = false
+			}
+		}
+	case "S":
+		for i := startPos[0] + 1; i < endPos[0]; i++ {
+			if boardState[i][startPos[1]] != empty {
+				clear = false
+			}
+		}
+	case "SW":
+		for i, j := startPos[0]+1, startPos[1]-1; i < endPos[0]; i, j = i+1, j-1 {
+			if boardState[i][j] != empty {
+				clear = false
+			}
+		}
 	case "W":
 		for i := startPos[1] - 1; i > endPos[1]; i-- {
 			if boardState[startPos[0]][i] != empty {
+				clear = false
+			}
+		}
+	case "NW":
+		for i, j := startPos[0]-1, startPos[1]-1; i > endPos[0]; i, j = i-1, j-1 {
+			if boardState[i][j] != empty {
 				clear = false
 			}
 		}

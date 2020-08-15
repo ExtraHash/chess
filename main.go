@@ -74,14 +74,14 @@ func deserializeBoard(dat []byte) [8][8]int {
 
 func createBoard() [8][8]int {
 	board := [8][8]int{
-		{blackRook, blackKnight, blackBishop, blackKing, blackQueen, blackBishop, blackKnight, blackRook},
+		{blackRook, blackKnight, blackBishop, blackQueen, blackKing, blackBishop, blackKnight, blackRook},
 		{blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn},
 		{empty, empty, empty, empty, empty, empty, empty, empty},
 		{empty, empty, empty, empty, empty, empty, empty, empty},
 		{empty, empty, empty, empty, empty, empty, empty, empty},
 		{empty, empty, empty, empty, empty, empty, empty, empty},
 		{whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn},
-		{whiteRook, whiteKnight, whiteBishop, whiteKing, whiteQueen, whiteBishop, whiteKnight, whiteRook},
+		{whiteRook, whiteKnight, whiteBishop, whiteQueen, whiteKing, whiteBishop, whiteKnight, whiteRook},
 	}
 	return board
 }
@@ -331,7 +331,6 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool
 		if squareDiffs[0].Added == empty {
 			pieceMoved = squareDiffs[0].Removed
 		}
-		fmt.Println("Moved piece " + strconv.Itoa(pieceMoved))
 	}
 	if len(squareDiffs) <= 1 {
 		fmt.Println("Expected square diff of length<=2, but received length " + strconv.Itoa(len(squareDiffs)))
@@ -351,10 +350,30 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool
 }
 
 func legalMoveForPiece(piece int, move []squareDiff) bool {
+	startPos := []int{}
+	endPos := []int{}
+	var pieceTaken int
+	if move[0].Added == 88 {
+		startPos = []int{move[0].Row, move[0].Column}
+		endPos = []int{move[1].Row, move[1].Column}
+		if move[1].Removed != 88 {
+			pieceTaken = move[1].Removed
+		}
+	}
+	if move[1].Added == 88 {
+		startPos = []int{move[1].Row, move[1].Column}
+		endPos = []int{move[0].Row, move[0].Column}
+		if move[0].Removed != 88 {
+			pieceTaken = move[0].Removed
+		}
+	}
+
+	fmt.Println(startPos, endPos, pieceTaken)
 	switch piece {
 	case whitePawn:
 		return true
 	case blackPawn:
+		fmt.Println("Moved black pawn.")
 		return true
 	default:
 		return true
@@ -472,7 +491,6 @@ func JoinPostHandler() http.Handler {
 						sub.Conn.WriteJSON(game)
 					}
 				}
-
 			} else {
 				fmt.Println("Signature didn't verify properly.")
 				return

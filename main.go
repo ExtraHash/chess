@@ -93,11 +93,19 @@ func main() {
 }
 
 func readConfig() Config {
-	bytes, err := ioutil.ReadFile("config.json")
-	check(err)
-	config := Config{}
-	json.Unmarshal(bytes, &config)
-	return config
+	if fileExists("config.json") {
+		bytes, err := ioutil.ReadFile("config.json")
+		check(err)
+		config := Config{}
+		json.Unmarshal(bytes, &config)
+		return config
+	}
+	jsonBytes, parseErr := json.MarshalIndent(defaultConfig, "", "   ")
+	check(parseErr)
+
+	writeErr := ioutil.WriteFile("config.json", jsonBytes, 0700)
+	check(writeErr)
+	return defaultConfig
 }
 
 // GetIP from http request

@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ed25519"
+	"os"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -13,6 +14,12 @@ type Config struct {
 	DbType          string `json:"dbType"`
 	DbConnectionStr string `json:"dbConnectionStr"`
 	Port            int    `json:"port"`
+}
+
+var defaultConfig = Config{
+	DbType:          "sqlite3",
+	DbConnectionStr: "chess.db",
+	Port:            8000,
 }
 
 // Game is an individual chess game.
@@ -44,6 +51,14 @@ type Model struct {
 	CreatedAt time.Time  `json:"-"`
 	UpdatedAt time.Time  `json:"-"`
 	DeletedAt *time.Time `json:"-" sql:"index"`
+}
+
+func fileExists(filename string) bool {
+	_, fileErr := os.Stat(filename)
+	if os.IsNotExist(fileErr) {
+		return false
+	}
+	return true
 }
 
 func getDB(config Config) *gorm.DB {

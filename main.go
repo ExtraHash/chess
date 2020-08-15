@@ -368,11 +368,12 @@ func legalMoveForPiece(piece int, move []squareDiff) bool {
 		}
 	}
 
+	rowCheck := startPos[0] - endPos[0]
+	colCheck := startPos[1] - endPos[1]
+
 	fmt.Println(startPos, endPos, pieceTaken)
 	switch piece {
 	case whitePawn:
-		rowCheck := startPos[0] - endPos[0]
-		colCheck := startPos[1] - endPos[1]
 		if (rowCheck == 1 || rowCheck == 2) && colCheck == 0 {
 			return true
 		}
@@ -381,8 +382,13 @@ func legalMoveForPiece(piece int, move []squareDiff) bool {
 		}
 		return false
 	case blackPawn:
-		fmt.Println("Moved black pawn.")
-		return true
+		if (rowCheck == -1 || rowCheck == -2) && colCheck == 0 {
+			return true
+		}
+		if (rowCheck == -1 || rowCheck == -2) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
+			return true
+		}
+		return false
 	default:
 		return true
 	}

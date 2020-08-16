@@ -339,7 +339,7 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool
 		fmt.Println("User did not move their own piece.")
 		return false
 	}
-	if !legalMoveForPiece(pieceMoved, squareDiffs, oldState) {
+	if !legalMoveForPiece(pieceMoved, squareDiffs, oldState, moveAuthor) {
 		fmt.Println("Illegal move for piece " + strconv.Itoa(pieceMoved))
 		return false
 	}
@@ -442,22 +442,29 @@ func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) boo
 	return clear
 }
 
-func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int) bool {
+func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string) bool {
 	startPos := []int{}
 	endPos := []int{}
 	var pieceTaken int
-	if move[0].Added == 88 {
+	if move[0].Added == empty {
 		startPos = []int{move[0].Row, move[0].Column}
 		endPos = []int{move[1].Row, move[1].Column}
 		if move[1].Removed != 88 {
 			pieceTaken = move[1].Removed
 		}
 	}
-	if move[1].Added == 88 {
+	if move[1].Added == empty {
 		startPos = []int{move[1].Row, move[1].Column}
 		endPos = []int{move[0].Row, move[0].Column}
-		if move[0].Removed != 88 {
+		if move[0].Removed != empty {
 			pieceTaken = move[0].Removed
+		}
+	}
+
+	if pieceTaken != empty {
+		if moveAuthor == pieceColor(pieceTaken) {
+			fmt.Println("Can not take your own piece.")
+			return false
 		}
 	}
 

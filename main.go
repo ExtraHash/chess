@@ -250,11 +250,16 @@ func GamePatchHandler() http.Handler {
 		if lastMove.MoveAuthor == "WHITE" {
 			newMoveAuthor = "BLACK"
 		}
-		if isValidMove(deserializeBoard(lastMove.State), jsonBody.State, newMoveAuthor) {
+		valid, pieceMoved, pieceTaken, startPos, endPos := isValidMove(deserializeBoard(lastMove.State), jsonBody.State, newMoveAuthor)
+		if valid {
 			newState := BoardState{
-				GameID:     jsonBody.GameID,
-				State:      serializeBoard(jsonBody.State),
-				MoveAuthor: newMoveAuthor,
+				GameID:        jsonBody.GameID,
+				State:         serializeBoard(jsonBody.State),
+				MoveAuthor:    newMoveAuthor,
+				PieceMoved:    pieceMoved,
+				PieceTaken:    pieceTaken,
+				StartPosition: posToString(startPos),
+				EndPosition:   posToString(endPos),
 			}
 			db.Create(&newState)
 			broadcastState := GameStatePush{
@@ -298,8 +303,10 @@ func pieceColor(piece int) string {
 - Player may only move their own pieces (edge case: castling)
 - Pieces may only move to the squares they are allowed to move
 */
-func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool {
+func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) (bool, int, int, []int, []int) {
 	squareDiffs := []squareDiff{}
+	startPos := []int{}
+	endPos := []int{}
 
 	for i := range oldState {
 		for j := range oldState {
@@ -316,9 +323,10 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool
 	}
 
 	var pieceMoved int
+	var pieceTaken int
 	if len(squareDiffs) > 2 {
 		fmt.Println("Expected square diff of length<=2, but received length " + strconv.Itoa(len(squareDiffs)))
-		return false
+		return false, pieceMoved, pieceTaken, startPos, endPos
 	}
 	if len(squareDiffs) == 2 {
 		for _, diff := range squareDiffs {
@@ -332,19 +340,73 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) bool
 	}
 	if len(squareDiffs) <= 1 {
 		fmt.Println("Expected square diff of length<=2, but received length " + strconv.Itoa(len(squareDiffs)))
-		return false
+		return false, pieceMoved, pieceTaken, startPos, endPos
 	}
 
 	if pieceColor(pieceMoved) != moveAuthor {
 		fmt.Println("User did not move their own piece.")
-		return false
+		return false, pieceMoved, pieceTaken, startPos, endPos
 	}
-	if !legalMoveForPiece(pieceMoved, squareDiffs, oldState, moveAuthor) {
+	legal, pieceTaken, sPos, ePos := legalMoveForPiece(pieceMoved, squareDiffs, oldState, moveAuthor)
+	startPos = sPos
+	endPos = ePos
+	if !legal {
 		fmt.Println("Illegal move for piece " + strconv.Itoa(pieceMoved))
-		return false
+		return false, pieceMoved, pieceTaken, startPos, endPos
 	}
 
-	return true
+	return true, pieceMoved, pieceTaken, startPos, endPos
+}
+
+func rowToString(row int) string {
+	switch row {
+	case 0:
+		return "8"
+	case 1:
+		return "7"
+	case 2:
+		return "6"
+	case 3:
+		return "5"
+	case 4:
+		return "4"
+	case 5:
+		return "3"
+	case 6:
+		return "2"
+	case 7:
+		return "1"
+	}
+	panic("Unknown row number.")
+}
+
+func colToString(col int) string {
+	switch col {
+	case 0:
+		return "A"
+	case 1:
+		return "B"
+	case 2:
+		return "C"
+	case 3:
+		return "D"
+	case 4:
+		return "E"
+	case 5:
+		return "F"
+	case 6:
+		return "G"
+	case 7:
+		return "H"
+	}
+	panic("Unknown col number.")
+}
+
+func posToString(pos []int) string {
+	if len(pos) != 2 {
+		panic("position must be of length 2")
+	}
+	return colToString(pos[1]) + rowToString(pos[0])
 }
 
 func evaluateDirection(startPos []int, endPos []int) string {
@@ -442,7 +504,7 @@ func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) boo
 	return clear
 }
 
-func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string) bool {
+func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string) (bool, int, []int, []int) {
 	startPos := []int{}
 	endPos := []int{}
 	var pieceTaken int
@@ -464,7 +526,7 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 	if pieceTaken != empty {
 		if moveAuthor == pieceColor(pieceTaken) {
 			fmt.Println("Can not take your own piece.")
-			return false
+			return false, pieceTaken, startPos, endPos
 		}
 	}
 
@@ -476,99 +538,99 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		if (rowCheck == 1 || rowCheck == 2) && colCheck == 0 && pieceTaken == 0 {
 			if rowCheck == 2 {
 				if startPos[0] == 6 {
-					return squaresBetweenClear(startPos, endPos, boardState)
+					return squaresBetweenClear(startPos, endPos, boardState), pieceTaken, startPos, endPos
 				}
-				return false
+				return false, pieceTaken, startPos, endPos
 			}
-			return squaresBetweenClear(startPos, endPos, boardState)
+			return squaresBetweenClear(startPos, endPos, boardState), pieceTaken, startPos, endPos
 		}
 		if (rowCheck == 1) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
-		return false
+		return false, pieceTaken, startPos, endPos
 	case blackPawn:
 		if (rowCheck == -1 || rowCheck == -2) && colCheck == 0 && pieceTaken == 0 {
 			if rowCheck == -2 {
 				if startPos[0] == 1 {
-					return squaresBetweenClear(startPos, endPos, boardState)
+					return squaresBetweenClear(startPos, endPos, boardState), pieceTaken, startPos, endPos
 				}
-				return false
+				return false, pieceTaken, startPos, endPos
 			}
-			return squaresBetweenClear(startPos, endPos, boardState)
+			return squaresBetweenClear(startPos, endPos, boardState), pieceTaken, startPos, endPos
 		}
 		if (rowCheck == -1) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
-		return false
+		return false, pieceTaken, startPos, endPos
 	case whiteKnight, blackKnight:
 		if rowCheck == 2 && colCheck == -1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == 2 && colCheck == 1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == 1 && colCheck == 2 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == 1 && colCheck == -2 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == -1 && colCheck == -2 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == -1 && colCheck == 2 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == -2 && colCheck == 1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == -2 && colCheck == -1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
-		return false
+		return false, pieceTaken, startPos, endPos
 	case whiteBishop, blackBishop:
 		if math.Abs(float64(rowCheck)) == math.Abs(float64(colCheck)) {
-			return squaresBetweenClear(startPos, endPos, boardState)
+			return squaresBetweenClear(startPos, endPos, boardState), pieceTaken, startPos, endPos
 		}
-		return false
+		return false, pieceTaken, startPos, endPos
 	case whiteRook, blackRook:
 		if rowCheck == 0 || colCheck == 0 {
-			return squaresBetweenClear(startPos, endPos, boardState)
+			return squaresBetweenClear(startPos, endPos, boardState), pieceTaken, startPos, endPos
 		}
-		return false
+		return false, pieceTaken, startPos, endPos
 	case whiteQueen, blackQueen:
 		if math.Abs(float64(rowCheck)) == math.Abs(float64(colCheck)) || (rowCheck == 0 || colCheck == 0) {
-			return squaresBetweenClear(startPos, endPos, boardState)
+			return squaresBetweenClear(startPos, endPos, boardState), pieceTaken, startPos, endPos
 		}
-		return false
+		return false, pieceTaken, startPos, endPos
 	case whiteKing, blackKing:
 		if rowCheck == 1 && colCheck == 0 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == -1 && colCheck == 0 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == 0 && colCheck == 1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == 0 && colCheck == -1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == 1 && colCheck == 1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == 1 && colCheck == -1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == -1 && colCheck == 1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
 		if rowCheck == -1 && colCheck == -1 {
-			return true
+			return true, pieceTaken, startPos, endPos
 		}
-		return false
+		return false, pieceTaken, startPos, endPos
 	default:
-		return true
+		return true, pieceTaken, startPos, endPos
 	}
 }
 

@@ -33,9 +33,13 @@ type Game struct {
 // BoardState is a single moment in time for a chess board
 type BoardState struct {
 	Model
-	GameID     uuid.UUID `json:"gameID"`
-	State      []byte    `json:"state"`
-	MoveAuthor string    `json:"moveAuthor"`
+	GameID        uuid.UUID `json:"gameID"`
+	State         []byte    `json:"state"`
+	MoveAuthor    string    `json:"moveAuthor"`
+	PieceMoved    int       `json:"pieceMoved"`
+	PieceTaken    int       `json:"pieceTaken"`
+	StartPosition string    `json:"startPos"`
+	EndPosition   string    `json:"endPos"`
 }
 
 // ReceivedBoardState is a new board state received from the client.

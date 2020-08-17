@@ -628,6 +628,14 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		if rowCheck == -1 && colCheck == -1 {
 			return true, pieceTaken, startPos, endPos
 		}
+		if rowCheck == 0 && colCheck == 2 {
+			fmt.Println("Queenside castle detected.")
+			return false, pieceTaken, startPos, endPos
+		}
+		if rowCheck == 0 && colCheck == -2 {
+			fmt.Println("Kingside castle detected.")
+			return false, pieceTaken, startPos, endPos
+		}
 		return false, pieceTaken, startPos, endPos
 	default:
 		return true, pieceTaken, startPos, endPos

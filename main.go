@@ -536,6 +536,46 @@ func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) boo
 	return clear
 }
 
+func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, startPos []int, endPos []int) bool {
+	fmt.Println("checking for en passant")
+	if moveAuthor == "WHITE" {
+		// is it starting from the correct row?
+		if startPos[0] != 3 {
+			return false
+		}
+		// is there a pawn on the row next to it?
+		if boardState[endPos[0]+1][endPos[1]] != blackPawn {
+			return false
+		}
+		// was the pawn just pushed?
+		lastMove := BoardState{}
+		db.Last(&lastMove, "game_id = ?", gameID)
+		if lastMove.StartPosition != posToString([]int{endPos[0] - 1, endPos[1]}) {
+			return false
+		}
+		return true
+	}
+	if moveAuthor == "BLACK" {
+		// is it starting from the correct row?
+		fmt.Println(startPos)
+		if startPos[0] != 4 {
+			return false
+		}
+		// is there a pawn on the row next to it?
+		if boardState[endPos[0]-1][endPos[1]] != whitePawn {
+			return false
+		}
+		// was the pawn just pushed?
+		lastMove := BoardState{}
+		db.Last(&lastMove, "game_id = ?", gameID)
+		if lastMove.StartPosition != posToString([]int{endPos[0] + 1, endPos[1]}) {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
 func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, []int, []int, string) {
 	startPos := []int{}
 	endPos := []int{}
@@ -580,6 +620,9 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		if (rowCheck == 1) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
 			return true, pieceTaken, startPos, endPos, cType
 		}
+		if (rowCheck == 1) && (colCheck == 1 || colCheck == -1) && pieceTaken == 0 {
+			return legalEnPassant(gameID, boardState, moveAuthor, startPos, endPos), pieceTaken, startPos, endPos, cType
+		}
 		return false, pieceTaken, startPos, endPos, cType
 	case blackPawn:
 		if (rowCheck == -1 || rowCheck == -2) && colCheck == 0 && pieceTaken == 0 {
@@ -593,6 +636,9 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		}
 		if (rowCheck == -1) && (colCheck == 1 || colCheck == -1) && pieceTaken != 0 {
 			return true, pieceTaken, startPos, endPos, cType
+		}
+		if (rowCheck == -1) && (colCheck == 1 || colCheck == -1) && pieceTaken == 0 {
+			return legalEnPassant(gameID, boardState, moveAuthor, startPos, endPos), pieceTaken, startPos, endPos, cType
 		}
 		return false, pieceTaken, startPos, endPos, cType
 	case whiteKnight, blackKnight:

@@ -250,7 +250,7 @@ func GamePatchHandler() http.Handler {
 		if lastMove.MoveAuthor == "WHITE" {
 			newMoveAuthor = "BLACK"
 		}
-		valid, pieceMoved, pieceTaken, startPos, endPos := isValidMove(deserializeBoard(lastMove.State), jsonBody.State, newMoveAuthor)
+		valid, pieceMoved, pieceTaken, startPos, endPos := isValidMove(deserializeBoard(lastMove.State), jsonBody.State, newMoveAuthor, game.GameID)
 		if valid {
 			newState := BoardState{
 				GameID:        jsonBody.GameID,
@@ -303,7 +303,7 @@ func pieceColor(piece int) string {
 - Player may only move their own pieces (edge case: castling)
 - Pieces may only move to the squares they are allowed to move
 */
-func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) (bool, int, int, []int, []int) {
+func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, int, []int, []int) {
 	squareDiffs := []squareDiff{}
 	startPos := []int{}
 	endPos := []int{}
@@ -347,7 +347,7 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string) (boo
 		fmt.Println("User did not move their own piece.")
 		return false, pieceMoved, pieceTaken, startPos, endPos
 	}
-	legal, pieceTaken, sPos, ePos := legalMoveForPiece(pieceMoved, squareDiffs, oldState, moveAuthor)
+	legal, pieceTaken, sPos, ePos := legalMoveForPiece(pieceMoved, squareDiffs, oldState, moveAuthor, gameID)
 	startPos = sPos
 	endPos = ePos
 	if !legal {
@@ -504,7 +504,7 @@ func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) boo
 	return clear
 }
 
-func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string) (bool, int, []int, []int) {
+func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, []int, []int) {
 	startPos := []int{}
 	endPos := []int{}
 	var pieceTaken int
@@ -630,16 +630,53 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		}
 		if rowCheck == 0 && colCheck == 2 {
 			fmt.Println("Queenside castle detected.")
-			return false, pieceTaken, startPos, endPos
+			return isLegalCastle("QUEEN", boardState, moveAuthor, gameID, startPos, endPos), pieceTaken, startPos, endPos
 		}
 		if rowCheck == 0 && colCheck == -2 {
 			fmt.Println("Kingside castle detected.")
-			return false, pieceTaken, startPos, endPos
+			return isLegalCastle("KING", boardState, moveAuthor, gameID, startPos, endPos), pieceTaken, startPos, endPos
 		}
 		return false, pieceTaken, startPos, endPos
 	default:
-		return true, pieceTaken, startPos, endPos
+		return false, pieceTaken, startPos, endPos
 	}
+}
+
+func isLegalCastle(direction string, boardState [8][8]int, moveAuthor string, gameID uuid.UUID, startPos []int, endPos []int) bool {
+	kingPos := ""
+	rookPos := ""
+
+	if moveAuthor == "WHITE" {
+		kingPos = "E1"
+		if direction == "KING" {
+			rookPos = "H1"
+		}
+		if direction == "QUEEN" {
+			rookPos = "A1"
+		}
+	}
+	if moveAuthor == "BLACK" {
+		kingPos = "E8"
+		if direction == "KING" {
+			rookPos = "H8"
+		}
+		if direction == "QUEEN" {
+			rookPos = "A8"
+		}
+	}
+
+	kingMoveList := []BoardState{}
+	rookMoveList := []BoardState{}
+
+	// D8 is starting position of white king
+	db.Where("game_id = ? AND start_position = ?", gameID, kingPos).Find(&kingMoveList)
+	db.Where("game_id = ? AND start_position = ?", gameID, rookPos).Find(&rookMoveList)
+
+	if len(kingMoveList) > 0 || len(rookMoveList) > 0 {
+		return false
+	}
+
+	return squaresBetweenClear(startPos, endPos, boardState)
 }
 
 // GameGetHandler handles the get method on the game endpoint.

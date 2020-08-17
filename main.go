@@ -591,23 +591,30 @@ func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, s
 func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, []int, []int, string, bool) {
 	startPos := []int{}
 	endPos := []int{}
+	fmt.Println(move)
 	cType := ""
 	enPassant := false
 	var pieceTaken int
+	var pieceAdded int
 	if move[0].Added == empty {
 		startPos = []int{move[0].Row, move[0].Column}
 		endPos = []int{move[1].Row, move[1].Column}
 		if move[1].Removed != 88 {
 			pieceTaken = move[1].Removed
 		}
+		pieceAdded = move[1].Added
 	}
 	if move[1].Added == empty {
 		startPos = []int{move[1].Row, move[1].Column}
 		endPos = []int{move[0].Row, move[0].Column}
+
 		if move[0].Removed != empty {
 			pieceTaken = move[0].Removed
 		}
+		pieceAdded = move[0].Added
 	}
+
+	fmt.Println(piece, pieceAdded)
 
 	if pieceTaken != empty {
 		if moveAuthor == pieceColor(pieceTaken) {
@@ -618,6 +625,28 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 
 	rowCheck := startPos[0] - endPos[0]
 	colCheck := startPos[1] - endPos[1]
+
+	if pieceAdded != piece {
+		// only pawns can promote
+		if piece != whitePawn || piece != blackPawn {
+			return false, pieceTaken, startPos, endPos, cType, enPassant
+		}
+		// did the pawn move start from the second to last row?
+		if moveAuthor == "WHITE" {
+			if startPos[0] != 1 {
+				return false, pieceTaken, startPos, endPos, cType, enPassant
+			}
+		}
+		if moveAuthor == "BLACK" {
+			if startPos[0] != 6 {
+				return false, pieceTaken, startPos, endPos, cType, enPassant
+			}
+		}
+		// you can't promote to a king
+		if pieceAdded == whiteKing || pieceAdded == blackKing {
+			return false, pieceTaken, startPos, endPos, cType, enPassant
+		}
+	}
 
 	switch piece {
 	case whitePawn:

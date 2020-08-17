@@ -663,10 +663,12 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		}
 		if rowCheck == 0 && colCheck == 2 {
 			fmt.Println("Queenside castle detected.")
+			cType = "QUEEN"
 			return isLegalCastle("QUEEN", boardState, moveAuthor, gameID, startPos, endPos), pieceTaken, startPos, endPos, cType
 		}
 		if rowCheck == 0 && colCheck == -2 {
 			fmt.Println("Kingside castle detected.")
+			cType = "KING"
 			return isLegalCastle("KING", boardState, moveAuthor, gameID, startPos, endPos), pieceTaken, startPos, endPos, cType
 		}
 		return false, pieceTaken, startPos, endPos, cType

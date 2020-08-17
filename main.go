@@ -628,10 +628,11 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 
 	if pieceAdded != piece {
 		// only pawns can promote
-		if piece != whitePawn || piece != blackPawn {
+		if piece != whitePawn && piece != blackPawn {
 			return false, pieceTaken, startPos, endPos, cType, enPassant
 		}
 		// did the pawn move start from the second to last row?
+		fmt.Println(startPos[0])
 		if moveAuthor == "WHITE" {
 			if startPos[0] != 1 {
 				return false, pieceTaken, startPos, endPos, cType, enPassant
@@ -647,6 +648,8 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 			return false, pieceTaken, startPos, endPos, cType, enPassant
 		}
 	}
+
+	fmt.Println("reached")
 
 	switch piece {
 	case whitePawn:

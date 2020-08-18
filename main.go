@@ -591,7 +591,6 @@ func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, s
 func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, []int, []int, string, bool) {
 	startPos := []int{}
 	endPos := []int{}
-	fmt.Println(move)
 	cType := ""
 	enPassant := false
 	var pieceTaken int
@@ -613,8 +612,6 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		}
 		pieceAdded = move[0].Added
 	}
-
-	fmt.Println(piece, pieceAdded)
 
 	if pieceTaken != empty {
 		if moveAuthor == pieceColor(pieceTaken) {
@@ -648,8 +645,6 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 			return false, pieceTaken, startPos, endPos, cType, enPassant
 		}
 	}
-
-	fmt.Println("reached")
 
 	switch piece {
 	case whitePawn:

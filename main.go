@@ -396,7 +396,7 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, game
 		fmt.Println("User did not move their own piece.")
 		return false, pieceMoved, pieceTaken, startPos, endPos, castleType, enPassant
 	}
-	legal, pieceTaken, sPos, ePos, cType, enPas := legalMoveForPiece(pieceMoved, squareDiffs, oldState, moveAuthor, gameID)
+	legal, pieceTaken, sPos, ePos, cType, enPas := legalMoveForPiece(pieceMoved, squareDiffs, newState, moveAuthor, gameID)
 	startPos = sPos
 	endPos = ePos
 	castleType = cType
@@ -588,6 +588,67 @@ func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, s
 	return false
 }
 
+func checkStatus(boardState [8][8]int, color string) (bool, bool) {
+	checkMate := false
+	kingSquare := []int{}
+	if color == "WHITE" {
+		for i, row := range boardState {
+			for j, square := range row {
+				if square == whiteKing {
+					kingSquare = []int{i, j}
+				}
+			}
+		}
+	}
+	if color == "BLACK" {
+		for i, row := range boardState {
+			for j, square := range row {
+				if square == blackKing {
+					kingSquare = []int{i, j}
+				}
+			}
+		}
+	}
+
+	return isAttacked(boardState, kingSquare, color), checkMate
+}
+
+func isAttacked(boardState [8][8]int, pos []int, color string) bool {
+	attacked := false
+	if color == "WHITE" {
+		// pawn check
+		if pos[0] > 0 {
+			if pos[1] > 0 {
+				if boardState[pos[0]-1][pos[1]-1] == blackPawn {
+					attacked = true
+				}
+			}
+			if pos[1] < 7 {
+				if boardState[pos[0]-1][pos[1]+1] == blackPawn {
+					attacked = true
+				}
+			}
+		}
+	}
+	if color == "BLACK" {
+		// pawn check
+		if pos[0] < 7 {
+			if pos[1] > 0 {
+				if boardState[pos[0]+1][pos[1]-1] == whitePawn {
+					attacked = true
+				}
+			}
+			if pos[1] < 7 {
+				if boardState[pos[0]+1][pos[1]+1] == whitePawn {
+					attacked = true
+				}
+			}
+		}
+	}
+
+	return attacked
+}
+
 func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, []int, []int, string, bool) {
 	startPos := []int{}
 	endPos := []int{}
@@ -644,6 +705,13 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		if pieceAdded == whiteKing || pieceAdded == blackKing {
 			return false, pieceTaken, startPos, endPos, cType, enPassant
 		}
+	}
+
+	check, checkMate := checkStatus(boardState, moveAuthor)
+	fmt.Println(check, checkMate)
+	if check {
+		fmt.Println("Can not move own king into check.")
+		return false, pieceTaken, startPos, endPos, cType, enPassant
 	}
 
 	switch piece {

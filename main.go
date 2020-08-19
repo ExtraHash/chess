@@ -615,6 +615,8 @@ func checkStatus(boardState [8][8]int, color string) (bool, bool) {
 
 func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 	attacked := false
+	knightMoves := [][]int{{2, -1}, {2, 1}, {-2, 1}, {-2, -1}, {-1, 2}, {-1, -2}, {1, 2}, {1, -2}}
+
 	if color == "WHITE" {
 		// pawn check
 		if pos[0] > 0 {
@@ -625,6 +627,16 @@ func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 			}
 			if pos[1] < 7 {
 				if boardState[pos[0]-1][pos[1]+1] == blackPawn {
+					attacked = true
+				}
+			}
+		}
+		// knight check
+		for _, move := range knightMoves {
+			row := pos[0] + move[0]
+			col := pos[1] + move[1]
+			if row >= 0 && row <= 7 && col >= 0 && col <= 7 {
+				if boardState[row][col] == blackKnight {
 					attacked = true
 				}
 			}
@@ -640,6 +652,16 @@ func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 			}
 			if pos[1] < 7 {
 				if boardState[pos[0]+1][pos[1]+1] == whitePawn {
+					attacked = true
+				}
+			}
+		}
+		// knight check
+		for _, move := range knightMoves {
+			row := pos[0] + move[0]
+			col := pos[1] + move[1]
+			if row >= 0 && row <= 7 && col >= 0 && col <= 7 {
+				if boardState[row][col] == whiteKnight {
 					attacked = true
 				}
 			}

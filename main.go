@@ -668,6 +668,15 @@ func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 				break
 			}
 		}
+		// west check
+		for i := pos[1] - 1; i >= 0; i-- {
+			if boardState[pos[0]][i] == blackRook || boardState[pos[0]][i] == blackQueen {
+				attacked = true
+			}
+			if boardState[pos[0]][i] != empty {
+				break
+			}
+		}
 	}
 	if color == "BLACK" {
 		// pawn check

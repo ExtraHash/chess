@@ -677,6 +677,16 @@ func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 				break
 			}
 		}
+		// ne check
+		for i, j := pos[0]-1, pos[1]+1; i >= 0 && j <= 7; i, j = i-1, j+1 {
+			fmt.Println(i, j)
+			if boardState[i][j] == blackBishop || boardState[i][j] == blackQueen {
+				attacked = true
+			}
+			if boardState[i][j] != empty {
+				break
+			}
+		}
 	}
 	if color == "BLACK" {
 		// pawn check

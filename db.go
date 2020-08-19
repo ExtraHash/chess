@@ -40,6 +40,8 @@ type BoardState struct {
 	PieceTaken    int       `json:"pieceTaken"`
 	StartPosition string    `json:"startPos"`
 	EndPosition   string    `json:"endPos"`
+	Check         bool      `json:"check"`
+	CheckMate     bool      `json:"checkMate"`
 }
 
 // ReceivedBoardState is a new board state received from the client.

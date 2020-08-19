@@ -643,7 +643,6 @@ func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 		}
 		// north check
 		for i := pos[0] - 1; i >= 0; i-- {
-			fmt.Println(boardState[i][pos[1]])
 			if boardState[i][pos[1]] == blackRook || boardState[i][pos[1]] == blackQueen {
 				attacked = true
 			}
@@ -653,11 +652,19 @@ func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 		}
 		// south check
 		for i := pos[0] + 1; i <= 7; i++ {
-			fmt.Println(boardState[i][pos[1]])
 			if boardState[i][pos[1]] == blackRook || boardState[i][pos[1]] == blackQueen {
 				attacked = true
 			}
 			if boardState[i][pos[1]] != empty {
+				break
+			}
+		}
+		// east check
+		for i := pos[1] + 1; i <= 7; i++ {
+			if boardState[pos[0]][i] == blackRook || boardState[pos[0]][i] == blackQueen {
+				attacked = true
+			}
+			if boardState[pos[0]][i] != empty {
 				break
 			}
 		}

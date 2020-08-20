@@ -351,10 +351,8 @@ func pieceColor(piece int) string {
 }
 
 /*
-- Pushing pawn to last row promotes
-- You may not move into check
-- If you are in check you must remove check
--
+- IF any square in between the king and rook is attacked, a castle is not legal
+- Detect checkmate
 */
 func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, int, []int, []int, string, bool, bool, bool) {
 	squareDiffs := []squareDiff{}
@@ -896,6 +894,14 @@ func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 	}
 
 	return attacked
+}
+
+func legalMoves(location []int, boardState [8][8]int) [][]int {
+	piece := boardState[location[0]][location[1]]
+
+	fmt.Println(piece)
+
+	return [][]int{{1, 2}}
 }
 
 func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, []int, []int, string, bool, bool, bool) {

@@ -348,7 +348,7 @@ func pieceColor(piece int) string {
 	case whitePawn, whiteKnight, whiteBishop, whiteRook, whiteQueen, whiteKing:
 		return "WHITE"
 	default:
-		return "INVALID"
+		return "EMPTY"
 	}
 }
 
@@ -507,75 +507,35 @@ func squaresTowards(startPos [2]int, direction string, boardState [8][8]int) [][
 	switch direction {
 	case "N":
 		for i := startPos[0] - 1; locWithinBounds([2]int{i, startPos[1]}); i-- {
-			if boardState[i][startPos[1]] == empty || pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, [2]int{i, startPos[1]})
-			}
-			if pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				break
-			}
+			squares = append(squares, [2]int{i, startPos[1]})
 		}
 	case "NE":
 		for i, j := startPos[0]-1, startPos[1]+1; locWithinBounds([2]int{i, j}); i, j = i-1, j+1 {
-			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, [2]int{i, j})
-			}
-			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				break
-			}
+			squares = append(squares, [2]int{i, j})
 		}
 	case "E":
 		for i := startPos[1] + 1; locWithinBounds([2]int{startPos[0], i}); i++ {
-			if boardState[startPos[0]][i] == empty || pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, [2]int{startPos[0], i})
-			}
-			if pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				break
-			}
+			squares = append(squares, [2]int{startPos[0], i})
 		}
 	case "SE":
 		for i, j := startPos[0]+1, startPos[1]+1; locWithinBounds([2]int{i, j}); i, j = i+1, j+1 {
-			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, [2]int{i, j})
-			}
-			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				break
-			}
+			squares = append(squares, [2]int{i, j})
 		}
 	case "S":
 		for i := startPos[0] + 1; locWithinBounds([2]int{i, startPos[1]}); i++ {
-			if boardState[i][startPos[1]] == empty || pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, [2]int{i, startPos[1]})
-			}
-			if pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				break
-			}
+			squares = append(squares, [2]int{i, startPos[1]})
 		}
 	case "SW":
 		for i, j := startPos[0]+1, startPos[1]-1; locWithinBounds([2]int{i, j}); i, j = i+1, j-1 {
-			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, [2]int{i, j})
-			}
-			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				break
-			}
+			squares = append(squares, [2]int{i, j})
 		}
 	case "W":
 		for i := startPos[1] - 1; locWithinBounds([2]int{startPos[0], i}); i-- {
-			if boardState[startPos[0]][i] == empty || pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, [2]int{startPos[0], i})
-			}
-			if pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				break
-			}
+			squares = append(squares, [2]int{startPos[0], i})
 		}
 	case "NW":
 		for i, j := startPos[0]-1, startPos[1]-1; locWithinBounds([2]int{i, j}); i, j = i-1, j-1 {
-			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, [2]int{i, j})
-			}
-			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				break
-			}
+			squares = append(squares, [2]int{i, j})
 		}
 	}
 	return squares
@@ -1012,13 +972,35 @@ func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 		}
 	case whiteBishop, blackBishop:
 		for _, move := range bishopMoves {
-			for _, vSquare := range squaresTowards(location, move, boardState) {
-				fmt.Println(vSquare)
+			for _, square := range squaresTowards(location, move, boardState) {
+				if squareOpen(boardState, square, piece) {
+					moves = append(moves, square)
+				} else {
+					break
+				}
+			}
+		}
+	case whiteRook, blackRook:
+		for _, move := range rookMoves {
+			for _, square := range squaresTowards(location, move, boardState) {
+				if squareOpen(boardState, square, piece) {
+					moves = append(moves, square)
+				} else {
+					break
+				}
+			}
+		}
+	case whiteQueen, blackQueen:
+		for _, move := range queenMoves {
+			for _, square := range squaresTowards(location, move, boardState) {
+				if squareOpen(boardState, square, piece) {
+					moves = append(moves, square)
+				} else {
+					break
+				}
 			}
 		}
 	}
-
-	fmt.Println(moves)
 	return moves
 }
 

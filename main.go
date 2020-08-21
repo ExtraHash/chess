@@ -624,7 +624,6 @@ func checkStatus(boardState [8][8]int, color string) (bool, bool) {
 
 func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 	attacked := false
-	knightMoves := [][]int{{2, -1}, {2, 1}, {-2, 1}, {-2, -1}, {-1, 2}, {-1, -2}, {1, 2}, {1, -2}}
 
 	if color == "WHITE" {
 		// pawn check
@@ -896,12 +895,36 @@ func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 	return attacked
 }
 
+func locWithinBounds(location []int) bool {
+	if location[0] >= 0 && location[0] <= 7 && location[1] >= 0 && location[1] <= 7 {
+		return true
+	}
+	return false
+}
+
+func squareOpen(boardState [8][8]int, location []int, piece int) bool {
+	if pieceColor(boardState[location[0]][location[1]]) != pieceColor(piece) || boardState[location[0]][location[1]] == empty {
+		return true
+	}
+	return false
+}
+
 func legalMoves(location []int, boardState [8][8]int) [][]int {
 	piece := boardState[location[0]][location[1]]
+	moves := [][]int{}
 
-	fmt.Println(piece)
-
-	return [][]int{{1, 2}}
+	switch boardState[location[0]][location[1]] {
+	case whiteKnight, blackKnight:
+		for _, move := range knightMoves {
+			moveLoc := []int{location[0] + move[0], location[1] + move[1]}
+			// if the location is in bounds && square is open
+			if locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece) {
+				moves = append(moves, moveLoc)
+			}
+		}
+	}
+	fmt.Println(moves)
+	return moves
 }
 
 func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, []int, []int, string, bool, bool, bool) {

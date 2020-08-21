@@ -15,3 +15,7 @@ var blackQueen int = 0x71
 var blackKing int = 0x6b
 
 var empty int = 0x58
+
+var knightMoves = [][]int{{2, -1}, {2, 1}, {-2, 1}, {-2, -1}, {-1, 2}, {-1, -2}, {1, 2}, {1, -2}}
+var whitePawnMoves = [][]int{{-1, 0}, {-1, 1}, {-1, -1}}
+var blackPawnMoves = [][]int{{1, 0}, {1, 1}, {1, -1}}

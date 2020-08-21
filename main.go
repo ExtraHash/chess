@@ -275,6 +275,8 @@ func GamePatchHandler() http.Handler {
 			jsonBody.State = finishEnPassant(jsonBody.State, pieceColor(pieceMoved), endPos)
 		}
 
+		fmt.Println(legalMoves(startPos, deserializeBoard(lastMove.State)))
+
 		if valid {
 			newState := BoardState{
 				GameID:        jsonBody.GameID,
@@ -996,10 +998,8 @@ func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 	case whitePawn:
 		for _, move := range whitePawnMoves {
 			moveLoc := [2]int{location[0] + move[0], location[1] + move[1]}
-			if locWithinBounds(moveLoc) {
-				if (move[1] == 1 || move[1] == -1) && pieceColor(boardState[move[0]][move[1]]) != pieceColor(piece) {
-					moves = append(moves, moveLoc)
-				}
+			if locWithinBounds(moveLoc) && squareOpen(boardState, location, piece) {
+				moves = append(moves, moveLoc)
 			}
 		}
 	case whiteKnight, blackKnight:
@@ -1008,6 +1008,12 @@ func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 			// if the location is in bounds && square is open
 			if locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece) {
 				moves = append(moves, moveLoc)
+			}
+		}
+	case whiteBishop, blackBishop:
+		for _, move := range bishopMoves {
+			for _, vSquare := range squaresTowards(location, move, boardState) {
+				fmt.Println(vSquare)
 			}
 		}
 	}

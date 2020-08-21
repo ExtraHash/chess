@@ -500,6 +500,84 @@ func evaluateDirection(startPos []int, endPos []int) string {
 	return "INVALID"
 }
 
+func squaresTowards(startPos []int, direction string, boardState [8][8]int) {
+	squares := [][]int{}
+	switch direction {
+	case "N":
+		for i := startPos[0] - 1; locWithinBounds([]int{i, startPos[1]}); i-- {
+			if boardState[i][startPos[1]] == empty || pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				squares = append(squares, []int{i, startPos[1]})
+			}
+			if pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				break
+			}
+		}
+	case "NE":
+		for i, j := startPos[0]-1, startPos[1]+1; locWithinBounds([]int{i, j}); i, j = i-1, j+1 {
+			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				squares = append(squares, []int{i, j})
+			}
+			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				break
+			}
+		}
+	case "E":
+		for i := startPos[1] + 1; locWithinBounds([]int{startPos[0], i}); i++ {
+			if boardState[startPos[0]][i] == empty || pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				squares = append(squares, []int{startPos[0], i})
+			}
+			if pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				break
+			}
+		}
+	case "SE":
+		for i, j := startPos[0]+1, startPos[1]+1; locWithinBounds([]int{i, j}); i, j = i+1, j+1 {
+			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				squares = append(squares, []int{i, j})
+			}
+			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				break
+			}
+		}
+	case "S":
+		for i := startPos[0] + 1; locWithinBounds([]int{i, startPos[1]}); i++ {
+			if boardState[i][startPos[1]] == empty || pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				squares = append(squares, []int{i, startPos[1]})
+			}
+			if pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				break
+			}
+		}
+	case "SW":
+		for i, j := startPos[0]+1, startPos[1]-1; locWithinBounds([]int{i, j}); i, j = i+1, j-1 {
+			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				squares = append(squares, []int{i, j})
+			}
+			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				break
+			}
+		}
+	case "W":
+		for i := startPos[1] - 1; locWithinBounds([]int{startPos[0], i}); i-- {
+			if boardState[startPos[0]][i] == empty || pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				squares = append(squares, []int{startPos[0], i})
+			}
+			if pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				break
+			}
+		}
+	case "NW":
+		for i, j := startPos[0]-1, startPos[1]-1; locWithinBounds([]int{i, j}); i, j = i-1, j-1 {
+			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				squares = append(squares, []int{i, j})
+			}
+			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
+				break
+			}
+		}
+	}
+}
+
 func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) bool {
 	direction := evaluateDirection(startPos, endPos)
 
@@ -914,6 +992,15 @@ func legalMoves(location []int, boardState [8][8]int) [][]int {
 	moves := [][]int{}
 
 	switch boardState[location[0]][location[1]] {
+	case whitePawn:
+		for _, move := range whitePawnMoves {
+			moveLoc := []int{location[0] + move[0], location[1] + move[1]}
+			if locWithinBounds(moveLoc) {
+				if (move[1] == 1 || move[1] == -1) && pieceColor(boardState[move[0]][move[1]]) != pieceColor(piece) {
+					moves = append(moves, moveLoc)
+				}
+			}
+		}
 	case whiteKnight, blackKnight:
 		for _, move := range knightMoves {
 			moveLoc := []int{location[0] + move[0], location[1] + move[1]}
@@ -923,6 +1010,7 @@ func legalMoves(location []int, boardState [8][8]int) [][]int {
 			}
 		}
 	}
+
 	fmt.Println(moves)
 	return moves
 }

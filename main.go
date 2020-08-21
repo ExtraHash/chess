@@ -198,7 +198,7 @@ type GameStatePush struct {
 	Type   string    `json:"type"`
 }
 
-func finishEnPassant(boardState [8][8]int, moveAuthor string, endPos []int) [8][8]int {
+func finishEnPassant(boardState [8][8]int, moveAuthor string, endPos [2]int) [8][8]int {
 	if moveAuthor == "WHITE" {
 		boardState[endPos[0]+1][endPos[1]] = empty
 	}
@@ -354,10 +354,10 @@ func pieceColor(piece int) string {
 - IF any square in between the king and rook is attacked, a castle is not legal
 - Detect checkmate
 */
-func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, int, []int, []int, string, bool, bool, bool) {
+func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, int, [2]int, [2]int, string, bool, bool, bool) {
 	squareDiffs := []squareDiff{}
-	startPos := []int{}
-	endPos := []int{}
+	startPos := [2]int{}
+	endPos := [2]int{}
 	castleType := ""
 	enPassant := false
 	check := false
@@ -461,14 +461,14 @@ func colToString(col int) string {
 	panic("Unknown col number.")
 }
 
-func posToString(pos []int) string {
+func posToString(pos [2]int) string {
 	if len(pos) != 2 {
 		panic("position must be of length 2")
 	}
 	return colToString(pos[1]) + rowToString(pos[0])
 }
 
-func evaluateDirection(startPos []int, endPos []int) string {
+func evaluateDirection(startPos [2]int, endPos [2]int) string {
 	rowCheck := startPos[0] - endPos[0]
 	colCheck := startPos[1] - endPos[1]
 
@@ -500,85 +500,86 @@ func evaluateDirection(startPos []int, endPos []int) string {
 	return "INVALID"
 }
 
-func squaresTowards(startPos []int, direction string, boardState [8][8]int) {
-	squares := [][]int{}
+func squaresTowards(startPos [2]int, direction string, boardState [8][8]int) [][2]int {
+	squares := [][2]int{}
 	switch direction {
 	case "N":
-		for i := startPos[0] - 1; locWithinBounds([]int{i, startPos[1]}); i-- {
+		for i := startPos[0] - 1; locWithinBounds([2]int{i, startPos[1]}); i-- {
 			if boardState[i][startPos[1]] == empty || pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, []int{i, startPos[1]})
+				squares = append(squares, [2]int{i, startPos[1]})
 			}
 			if pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
 				break
 			}
 		}
 	case "NE":
-		for i, j := startPos[0]-1, startPos[1]+1; locWithinBounds([]int{i, j}); i, j = i-1, j+1 {
+		for i, j := startPos[0]-1, startPos[1]+1; locWithinBounds([2]int{i, j}); i, j = i-1, j+1 {
 			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, []int{i, j})
+				squares = append(squares, [2]int{i, j})
 			}
 			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
 				break
 			}
 		}
 	case "E":
-		for i := startPos[1] + 1; locWithinBounds([]int{startPos[0], i}); i++ {
+		for i := startPos[1] + 1; locWithinBounds([2]int{startPos[0], i}); i++ {
 			if boardState[startPos[0]][i] == empty || pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, []int{startPos[0], i})
+				squares = append(squares, [2]int{startPos[0], i})
 			}
 			if pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
 				break
 			}
 		}
 	case "SE":
-		for i, j := startPos[0]+1, startPos[1]+1; locWithinBounds([]int{i, j}); i, j = i+1, j+1 {
+		for i, j := startPos[0]+1, startPos[1]+1; locWithinBounds([2]int{i, j}); i, j = i+1, j+1 {
 			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, []int{i, j})
+				squares = append(squares, [2]int{i, j})
 			}
 			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
 				break
 			}
 		}
 	case "S":
-		for i := startPos[0] + 1; locWithinBounds([]int{i, startPos[1]}); i++ {
+		for i := startPos[0] + 1; locWithinBounds([2]int{i, startPos[1]}); i++ {
 			if boardState[i][startPos[1]] == empty || pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, []int{i, startPos[1]})
+				squares = append(squares, [2]int{i, startPos[1]})
 			}
 			if pieceColor(boardState[i][startPos[1]]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
 				break
 			}
 		}
 	case "SW":
-		for i, j := startPos[0]+1, startPos[1]-1; locWithinBounds([]int{i, j}); i, j = i+1, j-1 {
+		for i, j := startPos[0]+1, startPos[1]-1; locWithinBounds([2]int{i, j}); i, j = i+1, j-1 {
 			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, []int{i, j})
+				squares = append(squares, [2]int{i, j})
 			}
 			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
 				break
 			}
 		}
 	case "W":
-		for i := startPos[1] - 1; locWithinBounds([]int{startPos[0], i}); i-- {
+		for i := startPos[1] - 1; locWithinBounds([2]int{startPos[0], i}); i-- {
 			if boardState[startPos[0]][i] == empty || pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, []int{startPos[0], i})
+				squares = append(squares, [2]int{startPos[0], i})
 			}
 			if pieceColor(boardState[startPos[0]][i]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
 				break
 			}
 		}
 	case "NW":
-		for i, j := startPos[0]-1, startPos[1]-1; locWithinBounds([]int{i, j}); i, j = i-1, j-1 {
+		for i, j := startPos[0]-1, startPos[1]-1; locWithinBounds([2]int{i, j}); i, j = i-1, j-1 {
 			if boardState[i][j] == empty || pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
-				squares = append(squares, []int{i, j})
+				squares = append(squares, [2]int{i, j})
 			}
 			if pieceColor(boardState[i][j]) != pieceColor(boardState[startPos[0]][startPos[1]]) {
 				break
 			}
 		}
 	}
+	return squares
 }
 
-func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) bool {
+func squaresBetweenClear(startPos [2]int, endPos [2]int, boardState [8][8]int) bool {
 	direction := evaluateDirection(startPos, endPos)
 
 	clear := true
@@ -637,7 +638,7 @@ func squaresBetweenClear(startPos []int, endPos []int, boardState [8][8]int) boo
 	return clear
 }
 
-func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, startPos []int, endPos []int) bool {
+func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, startPos [2]int, endPos [2]int) bool {
 	if moveAuthor == "WHITE" {
 		// is it starting from the correct row?
 		if startPos[0] != 3 {
@@ -650,7 +651,7 @@ func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, s
 		// was the pawn just pushed?
 		lastMove := BoardState{}
 		db.Last(&lastMove, "game_id = ?", gameID)
-		if lastMove.StartPosition != posToString([]int{endPos[0] - 1, endPos[1]}) {
+		if lastMove.StartPosition != posToString([2]int{endPos[0] - 1, endPos[1]}) {
 			return false
 		}
 		return true
@@ -667,7 +668,7 @@ func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, s
 		// was the pawn just pushed?
 		lastMove := BoardState{}
 		db.Last(&lastMove, "game_id = ?", gameID)
-		if lastMove.StartPosition != posToString([]int{endPos[0] + 1, endPos[1]}) {
+		if lastMove.StartPosition != posToString([2]int{endPos[0] + 1, endPos[1]}) {
 			return false
 		}
 		return true
@@ -677,12 +678,12 @@ func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, s
 
 func checkStatus(boardState [8][8]int, color string) (bool, bool) {
 	checkMate := false
-	kingSquare := []int{}
+	kingSquare := [2]int{}
 	if color == "WHITE" {
 		for i, row := range boardState {
 			for j, square := range row {
 				if square == whiteKing {
-					kingSquare = []int{i, j}
+					kingSquare = [2]int{i, j}
 				}
 			}
 		}
@@ -691,7 +692,7 @@ func checkStatus(boardState [8][8]int, color string) (bool, bool) {
 		for i, row := range boardState {
 			for j, square := range row {
 				if square == blackKing {
-					kingSquare = []int{i, j}
+					kingSquare = [2]int{i, j}
 				}
 			}
 		}
@@ -700,7 +701,7 @@ func checkStatus(boardState [8][8]int, color string) (bool, bool) {
 	return isAttacked(boardState, kingSquare, color), checkMate
 }
 
-func isAttacked(boardState [8][8]int, pos []int, color string) bool {
+func isAttacked(boardState [8][8]int, pos [2]int, color string) bool {
 	attacked := false
 
 	if color == "WHITE" {
@@ -973,28 +974,28 @@ func isAttacked(boardState [8][8]int, pos []int, color string) bool {
 	return attacked
 }
 
-func locWithinBounds(location []int) bool {
+func locWithinBounds(location [2]int) bool {
 	if location[0] >= 0 && location[0] <= 7 && location[1] >= 0 && location[1] <= 7 {
 		return true
 	}
 	return false
 }
 
-func squareOpen(boardState [8][8]int, location []int, piece int) bool {
+func squareOpen(boardState [8][8]int, location [2]int, piece int) bool {
 	if pieceColor(boardState[location[0]][location[1]]) != pieceColor(piece) || boardState[location[0]][location[1]] == empty {
 		return true
 	}
 	return false
 }
 
-func legalMoves(location []int, boardState [8][8]int) [][]int {
+func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 	piece := boardState[location[0]][location[1]]
-	moves := [][]int{}
+	moves := [][2]int{}
 
 	switch boardState[location[0]][location[1]] {
 	case whitePawn:
 		for _, move := range whitePawnMoves {
-			moveLoc := []int{location[0] + move[0], location[1] + move[1]}
+			moveLoc := [2]int{location[0] + move[0], location[1] + move[1]}
 			if locWithinBounds(moveLoc) {
 				if (move[1] == 1 || move[1] == -1) && pieceColor(boardState[move[0]][move[1]]) != pieceColor(piece) {
 					moves = append(moves, moveLoc)
@@ -1003,7 +1004,7 @@ func legalMoves(location []int, boardState [8][8]int) [][]int {
 		}
 	case whiteKnight, blackKnight:
 		for _, move := range knightMoves {
-			moveLoc := []int{location[0] + move[0], location[1] + move[1]}
+			moveLoc := [2]int{location[0] + move[0], location[1] + move[1]}
 			// if the location is in bounds && square is open
 			if locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece) {
 				moves = append(moves, moveLoc)
@@ -1015,9 +1016,9 @@ func legalMoves(location []int, boardState [8][8]int) [][]int {
 	return moves
 }
 
-func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, []int, []int, string, bool, bool, bool) {
-	startPos := []int{}
-	endPos := []int{}
+func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, [2]int, [2]int, string, bool, bool, bool) {
+	startPos := [2]int{}
+	endPos := [2]int{}
 	cType := ""
 	enPassant := false
 	var pieceTaken int
@@ -1025,16 +1026,16 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 	check := false
 	checkMate := false
 	if move[0].Added == empty {
-		startPos = []int{move[0].Row, move[0].Column}
-		endPos = []int{move[1].Row, move[1].Column}
+		startPos = [2]int{move[0].Row, move[0].Column}
+		endPos = [2]int{move[1].Row, move[1].Column}
 		if move[1].Removed != 88 {
 			pieceTaken = move[1].Removed
 		}
 		pieceAdded = move[1].Added
 	}
 	if move[1].Added == empty {
-		startPos = []int{move[1].Row, move[1].Column}
-		endPos = []int{move[0].Row, move[0].Column}
+		startPos = [2]int{move[1].Row, move[1].Column}
+		endPos = [2]int{move[0].Row, move[0].Column}
 
 		if move[0].Removed != empty {
 			pieceTaken = move[0].Removed
@@ -1209,7 +1210,7 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 	}
 }
 
-func isLegalCastle(direction string, boardState [8][8]int, moveAuthor string, gameID uuid.UUID, startPos []int, endPos []int) bool {
+func isLegalCastle(direction string, boardState [8][8]int, moveAuthor string, gameID uuid.UUID, startPos [2]int, endPos [2]int) bool {
 	kingPos := ""
 	rookPos := ""
 

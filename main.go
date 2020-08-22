@@ -962,6 +962,13 @@ func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 				moves = append(moves, moveLoc)
 			}
 		}
+	case blackPawn:
+		for _, move := range whitePawnMoves {
+			moveLoc := [2]int{location[0] + move[0], location[1] + move[1]}
+			if locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece) {
+				moves = append(moves, moveLoc)
+			}
+		}
 	case whiteKnight, blackKnight:
 		for _, move := range knightMoves {
 			moveLoc := [2]int{location[0] + move[0], location[1] + move[1]}
@@ -998,6 +1005,14 @@ func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 				} else {
 					break
 				}
+			}
+		}
+	case whiteKing, blackKing:
+		for _, move := range kingMoves {
+			moveLoc := [2]int{location[0] + move[0], location[1] + move[1]}
+			// if the location is in bounds && square is open
+			if locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece) && !isAttacked(boardState, moveLoc, pieceColor(piece)) {
+				moves = append(moves, moveLoc)
 			}
 		}
 	}

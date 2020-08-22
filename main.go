@@ -958,7 +958,7 @@ func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 	case whitePawn:
 		for _, move := range whitePawnMoves {
 			moveLoc := [2]int{location[0] + move[0], location[1] + move[1]}
-			if locWithinBounds(moveLoc) && squareOpen(boardState, location, piece) {
+			if locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece) {
 				moves = append(moves, moveLoc)
 			}
 		}

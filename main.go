@@ -264,6 +264,7 @@ func GamePatchHandler() http.Handler {
 
 		if lastMove.Check && check {
 			fmt.Println("Move does not resolve check.")
+			return
 		}
 
 		if castleType != "" {
@@ -274,8 +275,6 @@ func GamePatchHandler() http.Handler {
 			// modify state
 			jsonBody.State = finishEnPassant(jsonBody.State, pieceColor(pieceMoved), endPos)
 		}
-
-		fmt.Println(legalMoves(startPos, deserializeBoard(lastMove.State)))
 
 		if valid {
 			newState := BoardState{
@@ -638,8 +637,7 @@ func legalEnPassant(gameID uuid.UUID, boardState [8][8]int, moveAuthor string, s
 	return false
 }
 
-func checkStatus(boardState [8][8]int, color string) (bool, bool) {
-	checkMate := false
+func checkStatus(boardState [8][8]int, color string) bool {
 	kingSquare := [2]int{}
 	if color == "WHITE" {
 		for i, row := range boardState {
@@ -660,7 +658,9 @@ func checkStatus(boardState [8][8]int, color string) (bool, bool) {
 		}
 	}
 
-	return isAttacked(boardState, kingSquare, color), checkMate
+	inCheck := isAttacked(boardState, kingSquare, color)
+
+	return inCheck
 }
 
 func isAttacked(boardState [8][8]int, pos [2]int, color string) bool {
@@ -1019,6 +1019,50 @@ func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 	return moves
 }
 
+func checkMateStatus(boardState [8][8]int, color string) bool {
+	kingSquare := [2]int{}
+	fmt.Println(kingSquare)
+	if color == "WHITE" {
+		for i, row := range boardState {
+			for j, square := range row {
+				if square == whiteKing {
+					kingSquare = [2]int{i, j}
+				}
+			}
+		}
+	}
+	if color == "BLACK" {
+		for i, row := range boardState {
+			for j, square := range row {
+				if square == blackKing {
+					kingSquare = [2]int{i, j}
+				}
+			}
+		}
+	}
+
+	for i, row := range boardState {
+		for j, piece := range row {
+			fmt.Println("OUTER", i, j, piece)
+			if piece != empty {
+				for k, r := range boardState {
+					for l := range r {
+						testState := movePiece(boardState, [2]int{i, j}, [2]int{k, l})
+						fmt.Println(testState)
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func movePiece(boardState [8][8]int, startPos [2]int, endPos [2]int) [8][8]int {
+	boardState[endPos[0]][endPos[1]] = boardState[startPos[0]][startPos[1]]
+	boardState[startPos[0]][startPos[1]] = empty
+	return boardState
+}
+
 func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, [2]int, [2]int, string, bool, bool, bool) {
 	startPos := [2]int{}
 	endPos := [2]int{}
@@ -1079,7 +1123,7 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		}
 	}
 
-	selfCheck, _ := checkStatus(boardState, moveAuthor)
+	selfCheck := checkStatus(boardState, moveAuthor)
 	if selfCheck {
 		fmt.Println("Can not move own king into check.")
 		return false, pieceTaken, startPos, endPos, cType, enPassant, selfCheck, checkMate
@@ -1092,7 +1136,8 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 	if moveAuthor == "BLACK" {
 		otherSide = "WHITE"
 	}
-	check, checkMate = checkStatus(boardState, otherSide)
+	check = checkStatus(boardState, otherSide)
+	checkMate = checkMateStatus(boardState, otherSide)
 
 	switch piece {
 	case whitePawn:

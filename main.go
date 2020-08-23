@@ -1025,6 +1025,43 @@ func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 	return moves
 }
 
+func checkMateStatus(boardState [8][8]int, color string, gameID uuid.UUID) bool {
+	kingSquare := [2]int{}
+	checkMate := true
+	if color == "WHITE" {
+		for i, row := range boardState {
+			for j, square := range row {
+				if square == whiteKing {
+					kingSquare = [2]int{i, j}
+				}
+			}
+		}
+	}
+	if color == "BLACK" {
+		for i, row := range boardState {
+			for j, square := range row {
+				if square == blackKing {
+					kingSquare = [2]int{i, j}
+				}
+			}
+		}
+	}
+
+	for i, row := range boardState {
+		for j, piece := range row {
+			if pieceColor(piece) == color {
+				for _, mov := range legalMoves([2]int{i, j}, boardState) {
+					testState := movePiece(boardState, [2]int{i, j}, mov)
+					if !isAttacked(testState, kingSquare, color) {
+						checkMate = false
+					}
+				}
+			}
+		}
+	}
+	return checkMate
+}
+
 func movePiece(boardState [8][8]int, startPos [2]int, endPos [2]int) [8][8]int {
 	boardState[endPos[0]][endPos[1]] = boardState[startPos[0]][startPos[1]]
 	boardState[startPos[0]][startPos[1]] = empty
@@ -1105,6 +1142,9 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		otherSide = "WHITE"
 	}
 	check = checkStatus(boardState, otherSide)
+	if check {
+		checkMate = checkMateStatus(boardState, otherSide, gameID)
+	}
 
 	switch piece {
 	case whitePawn:

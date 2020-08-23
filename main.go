@@ -351,18 +351,8 @@ func pieceColor(piece int) string {
 	}
 }
 
-/*
-- IF any square in between the king and rook is attacked, a castle is not legal
-- Detect checkmate
-*/
-func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, int, [2]int, [2]int, string, bool, bool, bool) {
+func getSquareDiffs(oldState [8][8]int, newState [8][8]int) []squareDiff {
 	squareDiffs := []squareDiff{}
-	startPos := [2]int{}
-	endPos := [2]int{}
-	castleType := ""
-	enPassant := false
-	check := false
-	checkMate := false
 
 	for i := range oldState {
 		for j := range oldState {
@@ -377,6 +367,22 @@ func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, game
 			}
 		}
 	}
+
+	return squareDiffs
+}
+
+/*
+- IF any square in between the king and rook is attacked, a castle is not legal
+- Detect checkmate
+*/
+func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, int, [2]int, [2]int, string, bool, bool, bool) {
+	squareDiffs := getSquareDiffs(oldState, newState)
+	startPos := [2]int{}
+	endPos := [2]int{}
+	castleType := ""
+	enPassant := false
+	check := false
+	checkMate := false
 
 	var pieceMoved int
 	var pieceTaken int
@@ -1019,44 +1025,6 @@ func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
 	return moves
 }
 
-func checkMateStatus(boardState [8][8]int, color string) bool {
-	kingSquare := [2]int{}
-	fmt.Println(kingSquare)
-	if color == "WHITE" {
-		for i, row := range boardState {
-			for j, square := range row {
-				if square == whiteKing {
-					kingSquare = [2]int{i, j}
-				}
-			}
-		}
-	}
-	if color == "BLACK" {
-		for i, row := range boardState {
-			for j, square := range row {
-				if square == blackKing {
-					kingSquare = [2]int{i, j}
-				}
-			}
-		}
-	}
-
-	for i, row := range boardState {
-		for j, piece := range row {
-			fmt.Println("OUTER", i, j, piece)
-			if piece != empty {
-				for k, r := range boardState {
-					for l := range r {
-						testState := movePiece(boardState, [2]int{i, j}, [2]int{k, l})
-						fmt.Println(testState)
-					}
-				}
-			}
-		}
-	}
-	return false
-}
-
 func movePiece(boardState [8][8]int, startPos [2]int, endPos [2]int) [8][8]int {
 	boardState[endPos[0]][endPos[1]] = boardState[startPos[0]][startPos[1]]
 	boardState[startPos[0]][startPos[1]] = empty
@@ -1137,7 +1105,6 @@ func legalMoveForPiece(piece int, move []squareDiff, boardState [8][8]int, moveA
 		otherSide = "WHITE"
 	}
 	check = checkStatus(boardState, otherSide)
-	checkMate = checkMateStatus(boardState, otherSide)
 
 	switch piece {
 	case whitePawn:

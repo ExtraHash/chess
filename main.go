@@ -956,22 +956,25 @@ func squareOpen(boardState [8][8]int, location [2]int, piece int) bool {
 	return false
 }
 
-func legalMoves(location [2]int, boardState [8][8]int) [][2]int {
+func legalMoves(location [2]int, boardState [8][8]int, gameID uuid.UUID) [][2]int {
 	piece := boardState[location[0]][location[1]]
 	moves := [][2]int{}
 
 	switch boardState[location[0]][location[1]] {
 	case whitePawn:
 		for _, move := range whitePawnMoves {
+			if move[0] == -2 && location[0] != 1 {
+				continue
+			}
 			moveLoc := [2]int{location[0] + move[0], location[1] + move[1]}
-			if locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece) {
+			if (locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece)) || legalEnPassant(gameID, boardState, pieceColor(piece), location, moveLoc) {
 				moves = append(moves, moveLoc)
 			}
 		}
 	case blackPawn:
-		for _, move := range whitePawnMoves {
+		for _, move := range blackPawnMoves {
 			moveLoc := [2]int{location[0] + move[0], location[1] + move[1]}
-			if locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece) {
+			if locWithinBounds(moveLoc) && squareOpen(boardState, moveLoc, piece) || legalEnPassant(gameID, boardState, pieceColor(piece), location, moveLoc) {
 				moves = append(moves, moveLoc)
 			}
 		}
@@ -1050,7 +1053,7 @@ func checkMateStatus(boardState [8][8]int, color string, gameID uuid.UUID) bool 
 	for i, row := range boardState {
 		for j, piece := range row {
 			if pieceColor(piece) == color {
-				for _, mov := range legalMoves([2]int{i, j}, boardState) {
+				for _, mov := range legalMoves([2]int{i, j}, boardState, gameID) {
 					testState := movePiece(boardState, [2]int{i, j}, mov)
 					if !isAttacked(testState, kingSquare, color) {
 						checkMate = false

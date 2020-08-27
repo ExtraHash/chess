@@ -16,10 +16,10 @@ var blackKing int = 0x6b
 
 var empty int = 0x58
 
-var whitePawnMoves = [][]int{{-1, 0}, {-1, 1}, {-1, -1}}
-var blackPawnMoves = [][]int{{1, 0}, {1, 1}, {1, -1}}
-var knightMoves = [][]int{{2, -1}, {2, 1}, {-2, 1}, {-2, -1}, {-1, 2}, {-1, -2}, {1, 2}, {1, -2}}
-var kingMoves = [][]int{{1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {-1, 1}, {1, 0}}
+var whitePawnMoves = [][2]int{{-1, 0}, {-2, 0}, {-1, 1}, {-1, -1}}
+var blackPawnMoves = [][2]int{{1, 0}, {2, 0}, {1, 1}, {1, -1}}
+var knightMoves = [][2]int{{2, -1}, {2, 1}, {-2, 1}, {-2, -1}, {-1, 2}, {-1, -2}, {1, 2}, {1, -2}}
+var kingMoves = [][2]int{{1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {-1, 1}, {1, 0}}
 var bishopMoves = []string{"NE", "NW", "SE", "SW"}
 var rookMoves = []string{"N", "E", "S", "W"}
 var queenMoves = []string{"N", "E", "S", "W", "NE", "NW", "SE", "SW"}

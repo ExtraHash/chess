@@ -193,9 +193,10 @@ func storeBoardState(gameID uuid.UUID, state [8][8]int, moveAuthor string) {
 
 // GameStatePush is a websocket notification of a new game state.
 type GameStatePush struct {
-	GameID uuid.UUID `json:"gameID"`
-	Board  [8][8]int `json:"board"`
-	Type   string    `json:"type"`
+	GameID     uuid.UUID  `json:"gameID"`
+	Board      [8][8]int  `json:"board"`
+	Type       string     `json:"type"`
+	BoardState BoardState `json:"boardState"`
 }
 
 func finishEnPassant(boardState [8][8]int, moveAuthor string, endPos [2]int) [8][8]int {
@@ -260,7 +261,7 @@ func GamePatchHandler() http.Handler {
 		if lastMove.MoveAuthor == "WHITE" {
 			newMoveAuthor = "BLACK"
 		}
-		valid, pieceMoved, pieceTaken, startPos, endPos, castleType, enPassant, check, checkMate := isValidMove(deserializeBoard(lastMove.State), jsonBody.State, newMoveAuthor, game.GameID)
+		valid, pieceMoved, pieceTaken, startPos, endPos, castleType, enPassant, check, checkMate := parseMove(deserializeBoard(lastMove.State), jsonBody.State, newMoveAuthor, game.GameID)
 
 		if lastMove.Check && check {
 			fmt.Println("Move does not resolve check.")
@@ -290,9 +291,10 @@ func GamePatchHandler() http.Handler {
 			}
 			db.Create(&newState)
 			broadcastState := GameStatePush{
-				GameID: jsonBody.GameID,
-				Board:  jsonBody.State,
-				Type:   "move",
+				GameID:     jsonBody.GameID,
+				Board:      jsonBody.State,
+				Type:       "move",
+				BoardState: newState,
 			}
 			for _, sub := range socketSubs {
 				if sub.GameID == jsonBody.GameID {
@@ -375,7 +377,7 @@ func getSquareDiffs(oldState [8][8]int, newState [8][8]int) []squareDiff {
 - IF any square in between the king and rook is attacked, a castle is not legal
 - Detect checkmate
 */
-func isValidMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, int, [2]int, [2]int, string, bool, bool, bool) {
+func parseMove(oldState [8][8]int, newState [8][8]int, moveAuthor string, gameID uuid.UUID) (bool, int, int, [2]int, [2]int, string, bool, bool, bool) {
 	squareDiffs := getSquareDiffs(oldState, newState)
 	startPos := [2]int{}
 	endPos := [2]int{}
@@ -1300,6 +1302,27 @@ func isLegalCastle(direction string, boardState [8][8]int, moveAuthor string, ga
 
 	if len(kingMoveList) > 0 || len(rookMoveList) > 0 {
 		return false
+	}
+
+	if direction == "KING" {
+		for i, square := range squaresTowards(startPos, "E", boardState) {
+			if i > 2 {
+				break
+			}
+			if isAttacked(boardState, square, moveAuthor) {
+				return false
+			}
+		}
+	}
+	if direction == "QUEEN" {
+		for i, square := range squaresTowards(startPos, "W", boardState) {
+			if i > 2 {
+				break
+			}
+			if isAttacked(boardState, square, moveAuthor) {
+				return false
+			}
+		}
 	}
 
 	return squaresBetweenClear(startPos, endPos, boardState)
